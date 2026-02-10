@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { MessageSquare, Send, ArrowLeft, User } from 'lucide-react'
@@ -12,6 +12,55 @@ export default function Messages() {
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [searchParams] = useSearchParams()
+  const sellerParam = searchParams.get('seller')
+  const listingParam = searchParams.get('listing')
+  const [newConvoMessage, setNewConvoMessage] = useState('')
+  const [sellerInfo, setSellerInfo] = useState(null)
+  const [listingInfo, setListingInfo] = useState(null)
+
+  // Handle new conversation from Contact Seller button
+  useEffect(() => {
+    if (sellerParam && user && sellerParam !== user.id) {
+      fetchSellerAndListing()
+    }
+  }, [sellerParam, listingParam, user])
+
+  const fetchSellerAndListing = async () => {
+    try {
+      const { data: seller } = await supabase.from('profiles').select('*').eq('id', sellerParam).single()
+      setSellerInfo(seller)
+      if (listingParam) {
+        const { data: listing } = await supabase.from('listings').select('*').eq('id', listingParam).single()
+        setListingInfo(listing)
+      }
+    } catch (err) {
+      console.error('Error fetching seller:', err)
+    }
+  }
+
+  const startNewConversation = async (e) => {
+    e.preventDefault()
+    if (!newConvoMessage.trim() || !sellerParam) return
+    setSending(true)
+    try {
+      await supabase.from('messages').insert({
+        sender_id: user.id,
+        receiver_id: sellerParam,
+        listing_id: listingParam || null,
+        content: newConvoMessage.trim()
+      })
+      setNewConvoMessage('')
+      setSellerInfo(null)
+      setListingInfo(null)
+      window.history.replaceState({}, '', '/messages')
+      fetchConversations()
+    } catch (err) {
+      console.error('Error:', err)
+    } finally {
+      setSending(false)
+    }
+  }
 
   useEffect(() => {
     if (user) fetchConversations()
@@ -170,8 +219,40 @@ export default function Messages() {
               </div>
             </div>
 
+            {/* New Conversation (from Contact Seller) */}
+            {sellerInfo && !selectedConvo && (
+              <div className="flex-1 flex flex-col">
+                <div className="p-4 border-b border-slate-800 flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-full flex items-center justify-center text-white font-bold">
+                    {sellerInfo.full_name?.charAt(0) || '?'}
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">{sellerInfo.full_name}</p>
+                    {listingInfo && <p className="text-xs text-violet-400">{listingInfo.emoji} {listingInfo.title}</p>}
+                  </div>
+                </div>
+                <div className="flex-1 flex items-center justify-center p-4">
+                  <p className="text-slate-500">Start a conversation with this seller</p>
+                </div>
+                <form onSubmit={startNewConversation} className="p-4 border-t border-slate-800">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newConvoMessage}
+                      onChange={(e) => setNewConvoMessage(e.target.value)}
+                      placeholder="Type your message..."
+                      className="flex-1 px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    />
+                    <button type="submit" disabled={sending || !newConvoMessage.trim()} className="px-4 py-3 bg-violet-600 hover:bg-violet-500 rounded-lg text-white disabled:opacity-50">
+                      <Send className="w-5 h-5" />
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
             {/* Messages View */}
-            <div className={`flex-1 flex flex-col ${!selectedConvo ? 'hidden md:flex' : ''}`}>
+            <div className={`flex-1 flex flex-col ${!selectedConvo && !sellerInfo ? 'hidden md:flex' : ''} ${sellerInfo ? 'hidden' : ''}`}>
               {selectedConvo ? (
                 <>
                   <div className="p-4 border-b border-slate-800 flex items-center gap-3">
