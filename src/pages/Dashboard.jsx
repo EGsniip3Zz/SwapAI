@@ -403,11 +403,13 @@ export default function Dashboard() {
                       <tr key={listing.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <span className="text-2xl">{listing.emoji || '🤖'}</span>
-                            <div>
-                              <p className="font-medium text-white">{listing.title}</p>
-                              <p className="text-xs text-slate-500">{listing.category}</p>
-                            </div>
+                            <Link to={`/listing/${listing.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                              <span className="text-2xl">{listing.emoji || '🤖'}</span>
+                              <div>
+                                <p className="font-medium text-white">{listing.title}</p>
+                                <p className="text-xs text-slate-500">{listing.category}</p>
+                              </div>
+                            </Link>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-300">
@@ -433,8 +435,16 @@ export default function Dashboard() {
                               <Edit className="w-4 h-4" />
                             </Link>
                             <Link
+                              to={`/edit-listing/${listing.id}`}
+                              className="p-2 text-slate-400 hover:text-violet-400 transition-colors"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Link>
+                            <Link
                               to={`/listing/${listing.id}`}
                               className="p-2 text-slate-400 hover:text-white transition-colors"
+                              title="View"
                             >
                               <Eye className="w-4 h-4" />
                             </Link>
