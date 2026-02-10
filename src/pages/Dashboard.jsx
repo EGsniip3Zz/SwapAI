@@ -431,12 +431,6 @@ export default function Dashboard() {
                             <Link
                               to={`/edit-listing/${listing.id}`}
                               className="p-2 text-slate-400 hover:text-violet-400 transition-colors"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Link>
-                            <Link
-                              to={`/edit-listing/${listing.id}`}
-                              className="p-2 text-slate-400 hover:text-violet-400 transition-colors"
                               title="Edit"
                             >
                               <Edit className="w-4 h-4" />
