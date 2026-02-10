@@ -119,7 +119,7 @@ export default function ListingDetail() {
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                   <span className="text-white font-medium">{listing.rating || '5.0'}</span>
-                  <span className="text-slate-500">({listing.review_count || 0} reviews)</span>
+                  
                 </div>
               </div>
 
