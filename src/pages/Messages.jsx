@@ -2,73 +2,68 @@ import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { MessageSquare, Send, ArrowLeft, User } from 'lucide-react'
+import { MessageSquare, Send, ArrowLeft, User, X } from 'lucide-react'
 
 export default function Messages() {
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [conversations, setConversations] = useState([])
   const [selectedConvo, setSelectedConvo] = useState(null)
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
-  const [searchParams] = useSearchParams()
-  const sellerParam = searchParams.get('seller')
-  const listingParam = searchParams.get('listing')
-  const [newConvoMessage, setNewConvoMessage] = useState('')
+
+  // New conversation from Contact Seller
+  const [newConvoMode, setNewConvoMode] = useState(false)
   const [sellerInfo, setSellerInfo] = useState(null)
   const [listingInfo, setListingInfo] = useState(null)
+  const [newConvoMessage, setNewConvoMessage] = useState('')
 
-  // Handle new conversation from Contact Seller button
   useEffect(() => {
-    if (sellerParam && user && sellerParam !== user.id) {
-      fetchSellerAndListing()
-    }
-  }, [sellerParam, listingParam, user])
-
-  const fetchSellerAndListing = async () => {
-    try {
-      const { data: seller } = await supabase.from('profiles').select('*').eq('id', sellerParam).single()
-      setSellerInfo(seller)
-      if (listingParam) {
-        const { data: listing } = await supabase.from('listings').select('*').eq('id', listingParam).single()
-        setListingInfo(listing)
-      }
-    } catch (err) {
-      console.error('Error fetching seller:', err)
-    }
-  }
-
-  const startNewConversation = async (e) => {
-    e.preventDefault()
-    if (!newConvoMessage.trim() || !sellerParam) return
-    setSending(true)
-    try {
-      await supabase.from('messages').insert({
-        sender_id: user.id,
-        receiver_id: sellerParam,
-        listing_id: listingParam || null,
-        content: newConvoMessage.trim()
-      })
-      setNewConvoMessage('')
-      setSellerInfo(null)
-      setListingInfo(null)
-      window.history.replaceState({}, '', '/messages')
+    if (user) {
       fetchConversations()
-    } catch (err) {
-      console.error('Error:', err)
-    } finally {
-      setSending(false)
+      checkForNewConvo()
     }
-  }
-
-  useEffect(() => {
-    if (user) fetchConversations()
   }, [user])
 
   useEffect(() => {
     if (selectedConvo) fetchMessages(selectedConvo)
   }, [selectedConvo])
+
+  const checkForNewConvo = async () => {
+    const sellerId = searchParams.get('seller')
+    const listingId = searchParams.get('listing')
+
+    if (sellerId && sellerId !== user.id) {
+      // Fetch seller info
+      const { data: seller } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('id', sellerId)
+        .single()
+
+      if (seller) {
+        setSellerInfo(seller)
+
+        // Fetch listing info if provided
+        if (listingId) {
+          const { data: listing } = await supabase
+            .from('listings')
+            .select('id, title, emoji')
+            .eq('id', listingId)
+            .single()
+
+          if (listing) setListingInfo(listing)
+        }
+
+        setNewConvoMode(true)
+      }
+
+      // Clear URL params
+      setSearchParams({})
+    }
+  }
 
   const fetchConversations = async () => {
     try {
@@ -159,6 +154,43 @@ export default function Messages() {
     }
   }
 
+  const startNewConversation = async (e) => {
+    e.preventDefault()
+    if (!newConvoMessage.trim() || !sellerInfo) return
+
+    setSending(true)
+    try {
+      const { error } = await supabase.from('messages').insert({
+        sender_id: user.id,
+        receiver_id: sellerInfo.id,
+        listing_id: listingInfo?.id || null,
+        content: newConvoMessage.trim()
+      })
+
+      if (error) throw error
+
+      setNewConvoMessage('')
+      setNewConvoMode(false)
+      setSellerInfo(null)
+      setListingInfo(null)
+
+      // Refresh conversations and select the new one
+      await fetchConversations()
+
+    } catch (err) {
+      console.error('Error starting conversation:', err)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const cancelNewConvo = () => {
+    setNewConvoMode(false)
+    setSellerInfo(null)
+    setListingInfo(null)
+    setNewConvoMessage('')
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 pt-20 flex items-center justify-center">
@@ -178,7 +210,7 @@ export default function Messages() {
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden" style={{ height: '600px' }}>
           <div className="flex h-full">
             {/* Conversations List */}
-            <div className={`w-full md:w-1/3 border-r border-slate-800 ${selectedConvo ? 'hidden md:block' : ''}`}>
+            <div className={`w-full md:w-1/3 border-r border-slate-800 ${selectedConvo || newConvoMode ? 'hidden md:block' : ''}`}>
               <div className="p-4 border-b border-slate-800">
                 <h2 className="font-semibold text-white">Conversations</h2>
               </div>
@@ -191,7 +223,7 @@ export default function Messages() {
                   conversations.map((convo, i) => (
                     <button
                       key={i}
-                      onClick={() => setSelectedConvo(convo)}
+                      onClick={() => { setSelectedConvo(convo); setNewConvoMode(false); }}
                       className={`w-full p-4 text-left hover:bg-slate-800 transition-colors border-b border-slate-800/50 ${
                         selectedConvo?.otherUser?.id === convo.otherUser?.id ? 'bg-slate-800' : ''
                       }`}
@@ -219,41 +251,73 @@ export default function Messages() {
               </div>
             </div>
 
-            {/* New Conversation (from Contact Seller) */}
-            {sellerInfo && !selectedConvo && (
-              <div className="flex-1 flex flex-col">
-                <div className="p-4 border-b border-slate-800 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {sellerInfo.full_name?.charAt(0) || '?'}
-                  </div>
-                  <div>
-                    <p className="font-medium text-white">{sellerInfo.full_name}</p>
-                    {listingInfo && <p className="text-xs text-violet-400">{listingInfo.emoji} {listingInfo.title}</p>}
-                  </div>
-                </div>
-                <div className="flex-1 flex items-center justify-center p-4">
-                  <p className="text-slate-500">Start a conversation with this seller</p>
-                </div>
-                <form onSubmit={startNewConversation} className="p-4 border-t border-slate-800">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newConvoMessage}
-                      onChange={(e) => setNewConvoMessage(e.target.value)}
-                      placeholder="Type your message..."
-                      className="flex-1 px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                    />
-                    <button type="submit" disabled={sending || !newConvoMessage.trim()} className="px-4 py-3 bg-violet-600 hover:bg-violet-500 rounded-lg text-white disabled:opacity-50">
-                      <Send className="w-5 h-5" />
+            {/* Messages View */}
+            <div className={`flex-1 flex flex-col ${!selectedConvo && !newConvoMode ? 'hidden md:flex' : ''}`}>
+              {/* New Conversation Mode */}
+              {newConvoMode && sellerInfo ? (
+                <>
+                  <div className="p-4 border-b border-slate-800 flex items-center gap-3">
+                    <button
+                      onClick={cancelNewConvo}
+                      className="md:hidden p-2 text-slate-400 hover:text-white"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-full flex items-center justify-center text-white font-bold">
+                      {sellerInfo.full_name?.charAt(0) || '?'}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-white">{sellerInfo.full_name}</p>
+                      {listingInfo && (
+                        <p className="text-xs text-violet-400">
+                          {listingInfo.emoji} {listingInfo.title}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={cancelNewConvo}
+                      className="hidden md:block p-2 text-slate-400 hover:text-white"
+                    >
+                      <X className="w-5 h-5" />
                     </button>
                   </div>
-                </form>
-              </div>
-            )}
 
-            {/* Messages View */}
-            <div className={`flex-1 flex flex-col ${!selectedConvo && !sellerInfo ? 'hidden md:flex' : ''} ${sellerInfo ? 'hidden' : ''}`}>
-              {selectedConvo ? (
+                  <div className="flex-1 flex items-center justify-center p-4">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
+                        {sellerInfo.full_name?.charAt(0) || '?'}
+                      </div>
+                      <p className="text-white font-medium mb-1">Start a conversation with {sellerInfo.full_name}</p>
+                      {listingInfo && (
+                        <p className="text-sm text-violet-400 mb-4">
+                          About: {listingInfo.emoji} {listingInfo.title}
+                        </p>
+                      )}
+                      <p className="text-slate-500 text-sm">Send a message to get started</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={startNewConversation} className="p-4 border-t border-slate-800">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newConvoMessage}
+                        onChange={(e) => setNewConvoMessage(e.target.value)}
+                        placeholder="Type your message..."
+                        className="flex-1 px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        disabled={sending || !newConvoMessage.trim()}
+                        className="px-4 py-3 bg-violet-600 hover:bg-violet-500 rounded-lg text-white disabled:opacity-50 transition-colors"
+                      >
+                        <Send className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </form>
+                </>
+              ) : selectedConvo ? (
                 <>
                   <div className="p-4 border-b border-slate-800 flex items-center gap-3">
                     <button
