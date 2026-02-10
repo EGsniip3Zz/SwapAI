@@ -39,9 +39,6 @@ export default function Navbar() {
                 Sell a Tool
               </Link>
             )}
-            <Link to="/messages" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
-              Messages
-            </Link>
             {isAdmin && (
               <Link to="/admin" className="text-fuchsia-400 hover:text-fuchsia-300 transition-colors text-sm font-medium">
                 Admin
@@ -112,9 +109,6 @@ export default function Navbar() {
                   Sell a Tool
                 </Link>
               )}
-              <Link to="/messages" className="text-slate-300 hover:text-white transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
-                Messages
-              </Link>
               {isAdmin && (
                 <Link to="/admin" className="text-fuchsia-400 hover:text-fuchsia-300 transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
                   Admin
