@@ -14,6 +14,7 @@ import Support from './pages/Support'
 import Dashboard from './pages/Dashboard'
 import About from './pages/About'
 import Terms from './pages/Terms'
+import Messages from './pages/Messages'
 import EditListing from './pages/EditListing'
 import './index.css'
 
@@ -35,6 +36,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/about" element={<About />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/messages" element={<Messages />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

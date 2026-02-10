@@ -39,8 +39,8 @@ export default function Navbar() {
                 Sell a Tool
               </Link>
             )}
-            <Link to="/support" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
-              Support
+            <Link to="/messages" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
+              Messages
             </Link>
             {isAdmin && (
               <Link to="/admin" className="text-fuchsia-400 hover:text-fuchsia-300 transition-colors text-sm font-medium">
@@ -112,8 +112,8 @@ export default function Navbar() {
                   Sell a Tool
                 </Link>
               )}
-              <Link to="/support" className="text-slate-300 hover:text-white transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
-                Support
+              <Link to="/messages" className="text-slate-300 hover:text-white transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+                Messages
               </Link>
               {isAdmin && (
                 <Link to="/admin" className="text-fuchsia-400 hover:text-fuchsia-300 transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
