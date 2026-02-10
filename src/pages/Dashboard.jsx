@@ -403,10 +403,10 @@ export default function Dashboard() {
                       <tr key={listing.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <span className="text-2xl">{listing.emoji || '🤖'}</span>
+                            <Link to={`/edit-listing/${listing.id}`} className="p-2 text-slate-400 hover:text-violet-400 transition-colors" title="Edit"><Edit className="w-4 h-4" /></Link><Link to={`/listing/${listing.id}`} className="flex items-center gap-3 hover:opacity-80"><span className="text-2xl">{listing.emoji || '🤖'}</span>
                             <div>
                               <p className="font-medium text-white">{listing.title}</p>
-                              <p className="text-xs text-slate-500">{listing.category}</p>
+                              <p className="text-xs text-slate-500">{listing.category}</p></Link>
                             </div>
                           </div>
                         </td>
@@ -427,7 +427,7 @@ export default function Dashboard() {
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-end gap-2">
                             <Link
-                              to={`/listing/${listing.id}`}
+                              to={`/edit-listing/${listing.id}`} className="p-2 text-slate-400 hover:text-violet-400 transition-colors" title="Edit"><Edit className="w-4 h-4" /></Link><Link to={`/listing/${listing.id}`}
                               className="p-2 text-slate-400 hover:text-white transition-colors"
                             >
                               <Eye className="w-4 h-4" />

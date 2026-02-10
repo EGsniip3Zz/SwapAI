@@ -157,7 +157,7 @@ export default function SellTool() {
         category: formData.category,
         emoji: formData.emoji,
         price_type: formData.price_type,
-        price: formData.price_type === 'free' || formData.price_type === 'contact' ? 0 : parseFloat(formData.price),
+        price: formData.price_type === 'free' || formData.price_type === 'contact' ? 0 : Math.round(parseFloat(formData.price)),
         website_url: formData.website_url.trim() || null,
         demo_url: formData.demo_url.trim() || null,
         docs_url: formData.docs_url.trim() || null,
