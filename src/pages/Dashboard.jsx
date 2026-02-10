@@ -427,6 +427,12 @@ export default function Dashboard() {
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-end gap-2">
                             <Link
+                              to={`/edit-listing/${listing.id}`}
+                              className="p-2 text-slate-400 hover:text-violet-400 transition-colors"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Link>
+                            <Link
                               to={`/listing/${listing.id}`}
                               className="p-2 text-slate-400 hover:text-white transition-colors"
                             >
