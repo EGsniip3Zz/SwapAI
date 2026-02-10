@@ -14,6 +14,7 @@ import Support from './pages/Support'
 import Dashboard from './pages/Dashboard'
 import About from './pages/About'
 import Terms from './pages/Terms'
+import EditListing from './pages/EditListing'
 import './index.css'
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/listing/:id" element={<ListingDetail />} />
           <Route path="/sell" element={<SellTool />} />
+          <Route path="/edit-listing/:id" element={<EditListing />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/support" element={<Support />} />
           <Route path="/dashboard" element={<Dashboard />} />
