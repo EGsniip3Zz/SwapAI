@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import {
-  Star, ExternalLink, ArrowLeft, Globe, Code,
+  ExternalLink, ArrowLeft, Globe, Code,
   MessageSquare, Shield, Clock, Users, Zap
 } from 'lucide-react'
 
@@ -116,11 +116,6 @@ export default function ListingDetail() {
                 <span className="px-3 py-1 bg-violet-500/20 text-violet-400 rounded-full text-sm font-medium">
                   {categoryLabels[listing.category] || 'Other'}
                 </span>
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                  <span className="text-white font-medium">{listing.rating || '5.0'}</span>
-                  
-                </div>
               </div>
 
               <h1 className="text-3xl font-bold text-white mb-4">{listing.title}</h1>
@@ -254,10 +249,24 @@ export default function ListingDetail() {
                   <p className="text-sm text-slate-500">Tool Builder</p>
                 </div>
               </div>
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-sm transition-all">
-                <MessageSquare className="w-4 h-4" />
-                Contact Seller
-              </button>
+              {user && listing.profiles?.id !== user.id && (
+                <Link
+                  to={`/messages?seller=${listing.profiles?.id}&listing=${listing.id}`}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-sm transition-all"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Contact Seller
+                </Link>
+              )}
+              {!user && (
+                <Link
+                  to="/login"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-sm transition-all"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Login to Contact
+                </Link>
+              )}
             </div>
           </div>
         </div>
