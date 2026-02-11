@@ -3,23 +3,22 @@ import { supabase } from '../lib/supabase'
 import ListingCard from '../components/ListingCard'
 import { Search, Filter, ChevronDown } from 'lucide-react'
 
-const categories = [
-  { value: 'all', label: 'All Categories', emoji: '🔥' },
-  { value: 'text-nlp', label: 'Text & NLP', emoji: '📝' },
-  { value: 'image-gen', label: 'Image Gen', emoji: '🎨' },
-  { value: 'voice-audio', label: 'Voice & Audio', emoji: '🎙️' },
-  { value: 'video', label: 'Video', emoji: '🎬' },
-  { value: 'data-analysis', label: 'Data Analysis', emoji: '📊' },
-  { value: 'automation', label: 'Automation', emoji: '⚡' },
-  { value: 'other', label: 'Other', emoji: '🤖' },
-]
+const allCategories = {
+  'text-nlp': { label: 'Text & NLP', emoji: '📝' },
+  'image-gen': { label: 'Image Gen', emoji: '🎨' },
+  'voice-audio': { label: 'Voice & Audio', emoji: '🎙️' },
+  'video': { label: 'Video', emoji: '🎬' },
+  'data-analysis': { label: 'Data Analysis', emoji: '📊' },
+  'automation': { label: 'Automation', emoji: '⚡' },
+  'other': { label: 'Other', emoji: '🤖' },
+}
 
 const priceFilters = [
   { value: 'all', label: 'Any Price' },
   { value: 'free', label: 'Free' },
-  { value: 'under-50', label: 'Under $50' },
+  { value: 'paid', label: 'Paid' },
   { value: 'under-100', label: 'Under $100' },
-  { value: 'over-100', label: '$100+' },
+  { value: 'over-1999', label: '$1999+' },
 ]
 
 const sortOptions = [
@@ -27,7 +26,6 @@ const sortOptions = [
   { value: 'oldest', label: 'Oldest First' },
   { value: 'price-low', label: 'Price: Low to High' },
   { value: 'price-high', label: 'Price: High to Low' },
-  { value: 'rating', label: 'Highest Rated' },
 ]
 
 export default function Marketplace() {
@@ -38,6 +36,7 @@ export default function Marketplace() {
   const [selectedPrice, setSelectedPrice] = useState('all')
   const [selectedSort, setSelectedSort] = useState('newest')
   const [showFilters, setShowFilters] = useState(false)
+  const [availableCategories, setAvailableCategories] = useState([])
 
   useEffect(() => {
     fetchListings()
@@ -65,12 +64,12 @@ export default function Marketplace() {
       // Price filter
       if (selectedPrice === 'free') {
         query = query.eq('price_type', 'free')
-      } else if (selectedPrice === 'under-50') {
-        query = query.lt('price', 50).neq('price_type', 'free')
+      } else if (selectedPrice === 'paid') {
+        query = query.neq('price_type', 'free')
       } else if (selectedPrice === 'under-100') {
         query = query.lt('price', 100).neq('price_type', 'free')
-      } else if (selectedPrice === 'over-100') {
-        query = query.gte('price', 100)
+      } else if (selectedPrice === 'over-1999') {
+        query = query.gte('price', 1999)
       }
 
       // Sort
@@ -82,14 +81,23 @@ export default function Marketplace() {
         query = query.order('price', { ascending: true })
       } else if (selectedSort === 'price-high') {
         query = query.order('price', { ascending: false })
-      } else if (selectedSort === 'rating') {
-        query = query.order('rating', { ascending: false })
       }
 
       const { data, error } = await query
 
       if (error) throw error
       setListings(data || [])
+
+      // Get unique categories from all approved listings
+      const { data: allListings } = await supabase
+        .from('listings')
+        .select('category')
+        .eq('status', 'approved')
+
+      if (allListings) {
+        const uniqueCategories = [...new Set(allListings.map(l => l.category))]
+        setAvailableCategories(uniqueCategories)
+      }
     } catch (error) {
       console.error('Error fetching listings:', error)
     } finally {
@@ -148,23 +156,41 @@ export default function Marketplace() {
           {/* Filters */}
           <div className={`${showFilters ? 'block' : 'hidden'} md:block`}>
             <div className="flex flex-wrap gap-4">
-              {/* Category Pills */}
+              {/* Category Pills - Only show categories that have listings */}
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap gap-2">
-                  {categories.map((cat) => (
-                    <button
-                      key={cat.value}
-                      onClick={() => setSelectedCategory(cat.value)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                        selectedCategory === cat.value
-                          ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
-                          : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
-                      }`}
-                    >
-                      <span className="mr-1">{cat.emoji}</span>
-                      {cat.label}
-                    </button>
-                  ))}
+                  {/* All Categories button */}
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                      selectedCategory === 'all'
+                        ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+                    }`}
+                  >
+                    <span className="mr-1">🔥</span>
+                    All Categories
+                  </button>
+
+                  {/* Dynamic category buttons */}
+                  {availableCategories.map((catValue) => {
+                    const cat = allCategories[catValue]
+                    if (!cat) return null
+                    return (
+                      <button
+                        key={catValue}
+                        onClick={() => setSelectedCategory(catValue)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                          selectedCategory === catValue
+                            ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
+                            : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+                        }`}
+                      >
+                        <span className="mr-1">{cat.emoji}</span>
+                        {cat.label}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
