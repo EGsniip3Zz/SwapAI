@@ -384,7 +384,6 @@ export default function ListingDetail() {
                       >
                         <CreditCard className="w-4 h-4" />
                         {purchasing ? 'Processing...' : 'Pay with Card'}
-                        <span className="text-xs opacity-75">(10% fee)</span>
                       </button>
                       <button
                         onClick={handleBuyWithCrypto}
@@ -393,7 +392,6 @@ export default function ListingDetail() {
                       >
                         <Bitcoin className="w-4 h-4" />
                         {purchasing ? 'Processing...' : 'Pay with Crypto'}
-                        <span className="text-xs opacity-75">(8.5% fee)</span>
                       </button>
                       {!listing.profiles?.stripe_account_id && (
                         <p className="text-xs text-yellow-400 text-center">Card payment unavailable - seller hasn't connected Stripe</p>
