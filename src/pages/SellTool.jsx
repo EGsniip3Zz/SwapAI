@@ -47,6 +47,7 @@ export default function SellTool() {
     docs_url: '',
     features: [''],
     tech_stack: [''],
+    is_nsfw: false,
   })
 
   if (!user || !isSeller) {
@@ -66,14 +67,21 @@ export default function SellTool() {
     return (
       <div className="min-h-screen bg-slate-950 pt-20">
         <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-          <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-gradient-to-r from-violet-500 to-fuchsia-500">
             <CheckCircle className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-4">Listing Submitted!</h1>
-          <p className="text-slate-400 mb-6">Your tool is now live on the marketplace.</p>
+          <h1 className="text-2xl font-bold text-white mb-4">Listing Submitted for Review!</h1>
+          <p className="text-slate-400 mb-6">
+            Your listing is pending admin approval. This usually takes less than 24 hours.
+          </p>
+          <p className="text-sm text-slate-500 mb-6">
+            All listings are reviewed before going live to ensure quality and safety.
+          </p>
           <div className="flex items-center justify-center gap-4">
-            <button onClick={() => navigate('/marketplace')} className="px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-lg text-white font-semibold">View Marketplace</button>
-            <button onClick={() => { setSuccess(false); setImageFile(null); setImagePreview(null); setFormData({ title: '', short_description: '', description: '', category: 'text-nlp', emoji: '🤖', price_type: 'one-time', price: '', website_url: '', demo_url: '', docs_url: '', features: [''], tech_stack: [] }); }} className="px-6 py-3 bg-slate-800 rounded-lg text-white font-medium">List Another Tool</button>
+            <button onClick={() => navigate('/dashboard')} className="px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-lg text-white font-semibold">
+              View Dashboard
+            </button>
+            <button onClick={() => { setSuccess(false); setImageFile(null); setImagePreview(null); setFormData({ title: '', short_description: '', description: '', category: 'text-nlp', emoji: '🤖', price_type: 'one-time', price: '', website_url: '', demo_url: '', docs_url: '', features: [''], tech_stack: [''], is_nsfw: false }); }} className="px-6 py-3 bg-slate-800 rounded-lg text-white font-medium">List Another Tool</button>
           </div>
         </div>
       </div>
@@ -149,6 +157,9 @@ export default function SellTool() {
       let imageUrl = null
       if (imageFile) { imageUrl = await uploadImage() }
 
+      const priceValue = formData.price_type === 'free' || formData.price_type === 'contact' ? 0 : Math.round(parseFloat(formData.price))
+
+      // All listings require manual approval
       const { error } = await supabase.from('listings').insert({
         seller_id: user.id,
         title: formData.title.trim(),
@@ -157,15 +168,15 @@ export default function SellTool() {
         category: formData.category,
         emoji: formData.emoji,
         price_type: formData.price_type,
-        price: formData.price_type === 'free' || formData.price_type === 'contact' ? 0 : Math.round(parseFloat(formData.price)),
+        price: priceValue,
         website_url: formData.website_url.trim() || null,
         demo_url: formData.demo_url.trim() || null,
         docs_url: formData.docs_url.trim() || null,
         features: features.length > 0 ? features : null,
         tech_stack: tech_stack.length > 0 ? tech_stack : null,
         image_url: imageUrl,
-        status: 'approved',
-        rating: 5.0,
+        status: 'pending',
+        is_nsfw: formData.is_nsfw,
         review_count: 0,
         purchase_count: 0,
       })
@@ -338,9 +349,34 @@ export default function SellTool() {
             </div>
           </div>
 
+          {/* Content Rating */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-violet-400" />
+              Content Rating
+            </h2>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.is_nsfw}
+                onChange={(e) => setFormData(prev => ({ ...prev, is_nsfw: e.target.checked }))}
+                className="mt-1 w-5 h-5 rounded border-slate-600 bg-slate-800 text-violet-500 focus:ring-violet-500 focus:ring-offset-slate-900"
+              />
+              <div>
+                <span className="font-medium text-white">This product contains NSFW/Adult content</span>
+                <p className="text-sm text-slate-400 mt-1">
+                  Check this if your tool generates or processes adult content, explicit material, or is intended for mature audiences only.
+                  NSFW listings require admin approval before going live.
+                </p>
+              </div>
+            </label>
+          </div>
+
           {/* Submit */}
           <div className="flex items-center justify-between pt-6 border-t border-slate-800">
-            <p className="text-sm text-slate-500">Your listing will be live immediately.</p>
+            <p className="text-sm text-slate-500">
+              All listings are reviewed before going live.
+            </p>
             <button type="submit" disabled={loading || uploading} className="px-8 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 rounded-lg text-white font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed">
               {uploading ? 'Uploading Image...' : loading ? 'Submitting...' : 'Submit Listing'}
             </button>
