@@ -91,9 +91,12 @@ export default function Terms() {
                 <li>You will not engage in fraudulent, deceptive, or misleading practices</li>
               </ul>
               <p className="mt-4">
-                <strong className="text-white">Platform Fee:</strong> SwapAI charges a 10% platform fee on all transactions.
-                Sellers receive 90% of the sale price, minus payment processing fees (approximately 2.9% + $0.30 per transaction).
+                <strong className="text-white">Platform Fees:</strong>
               </p>
+              <ul className="list-disc list-inside space-y-1 ml-4 mt-2">
+                <li><strong className="text-white">Card Payments (Stripe):</strong> 10% platform fee. Sellers receive 90% minus Stripe processing fees (~2.9% + $0.30).</li>
+                <li><strong className="text-white">Cryptocurrency Payments:</strong> 8.5% platform fee. Sellers receive 91.5% of the sale price.</li>
+              </ul>
               <p className="mt-4">
                 <strong className="text-white">Seller Indemnification:</strong> Sellers agree to indemnify and hold harmless
                 SwapAI from any claims, damages, or expenses arising from their products, listings, or conduct.

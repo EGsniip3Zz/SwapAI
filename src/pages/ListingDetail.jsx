@@ -1,17 +1,23 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import {
   ExternalLink, ArrowLeft, Globe, Code,
-  MessageSquare, Shield, Clock, Users, Zap
+  MessageSquare, Shield, Clock, Users, Zap, CreditCard, Bitcoin, CheckCircle
 } from 'lucide-react'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 export default function ListingDetail() {
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
   const [listing, setListing] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [purchasing, setPurchasing] = useState(false)
+  const [showPaymentOptions, setShowPaymentOptions] = useState(false)
+  const purchaseStatus = searchParams.get('purchase')
 
   useEffect(() => {
     fetchListing()
@@ -26,7 +32,8 @@ export default function ListingDetail() {
           profiles (
             id,
             full_name,
-            avatar_url
+            avatar_url,
+            stripe_account_id
           )
         `)
         .eq('id', id)
@@ -38,6 +45,58 @@ export default function ListingDetail() {
       console.error('Error fetching listing:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleBuyWithCard = async () => {
+    if (!user) return
+    setPurchasing(true)
+    try {
+      const response = await fetch(`${API_URL}/api/stripe/create-checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          listingId: listing.id,
+          listingTitle: listing.title,
+          price: listing.price,
+          sellerStripeAccountId: listing.profiles?.stripe_account_id,
+          buyerEmail: user.email
+        })
+      })
+      const data = await response.json()
+      if (data.error) throw new Error(data.error)
+      window.location.href = data.url
+    } catch (error) {
+      console.error('Checkout error:', error)
+      alert(error.message || 'Failed to start checkout')
+    } finally {
+      setPurchasing(false)
+    }
+  }
+
+  const handleBuyWithCrypto = async () => {
+    if (!user) return
+    setPurchasing(true)
+    try {
+      const response = await fetch(`${API_URL}/api/coinbase/create-checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          listingId: listing.id,
+          listingTitle: listing.title,
+          price: listing.price,
+          sellerId: listing.profiles?.id,
+          buyerEmail: user.email
+        })
+      })
+      const data = await response.json()
+      if (data.error) throw new Error(data.error)
+      window.location.href = data.url
+    } catch (error) {
+      console.error('Crypto checkout error:', error)
+      alert(error.message || 'Failed to start crypto checkout')
+    } finally {
+      setPurchasing(false)
     }
   }
 
@@ -167,6 +226,17 @@ export default function ListingDetail() {
           <div className="space-y-6">
             {/* Purchase Card */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 sticky top-24">
+              {/* Purchase Success Message */}
+              {purchaseStatus === 'success' && (
+                <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/50 rounded-lg">
+                  <div className="flex items-center gap-2 text-emerald-400 mb-1">
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="font-semibold">Purchase Successful!</span>
+                  </div>
+                  <p className="text-sm text-slate-400">Thank you for your purchase. The seller will be notified.</p>
+                </div>
+              )}
+
               {/* Price */}
               <div className="mb-6">
                 <div className="text-3xl font-bold text-white mb-1">
@@ -178,6 +248,61 @@ export default function ListingDetail() {
                   <p className="text-sm text-slate-500">Billed monthly, cancel anytime</p>
                 )}
               </div>
+
+              {/* Buy Button - shows payment options */}
+              {listing.price_type !== 'free' && listing.price_type !== 'contact' && listing.price > 0 && user && listing.profiles?.id !== user.id && (
+                <div className="mb-4">
+                  {!showPaymentOptions ? (
+                    <button
+                      onClick={() => setShowPaymentOptions(true)}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-lg text-white font-semibold transition-all"
+                    >
+                      Buy Now - ${listing.price}
+                    </button>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm text-slate-400 text-center mb-3">Choose payment method:</p>
+                      <button
+                        onClick={handleBuyWithCard}
+                        disabled={purchasing || !listing.profiles?.stripe_account_id}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 rounded-lg text-white font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        {purchasing ? 'Processing...' : 'Pay with Card'}
+                        <span className="text-xs opacity-75">(10% fee)</span>
+                      </button>
+                      <button
+                        onClick={handleBuyWithCrypto}
+                        disabled={purchasing}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-400 hover:to-yellow-400 rounded-lg text-white font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Bitcoin className="w-4 h-4" />
+                        {purchasing ? 'Processing...' : 'Pay with Crypto'}
+                        <span className="text-xs opacity-75">(8.5% fee)</span>
+                      </button>
+                      {!listing.profiles?.stripe_account_id && (
+                        <p className="text-xs text-yellow-400 text-center">Card payment unavailable - seller hasn't connected Stripe</p>
+                      )}
+                      <button
+                        onClick={() => setShowPaymentOptions(false)}
+                        className="w-full text-sm text-slate-500 hover:text-slate-400"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Login to Buy */}
+              {listing.price_type !== 'free' && listing.price_type !== 'contact' && listing.price > 0 && !user && (
+                <Link
+                  to="/login"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-lg text-white font-semibold transition-all mb-4"
+                >
+                  Login to Buy - ${listing.price}
+                </Link>
+              )}
 
               {/* CTA Buttons */}
               <div className="space-y-3 mb-6">

@@ -14,10 +14,11 @@ app.use(cors({
 }))
 app.use(express.json())
 
-app.get('/', (req, res) => res.json({ status: 'ok', message: 'SwapAI Stripe Server' }))
+app.get('/', (req, res) => res.json({ status: 'ok', message: 'SwapAI Payment Server' }))
 app.get('/health', (req, res) => res.json({ status: 'ok' }))
 
-const PLATFORM_FEE_PERCENT = 10
+const STRIPE_FEE_PERCENT = 10
+const CRYPTO_FEE_PERCENT = 8.5
 
 app.post('/api/stripe/create-account', async (req, res) => {
   try {
@@ -33,7 +34,7 @@ app.post('/api/stripe/create-checkout', async (req, res) => {
     const { listingId, listingTitle, price, sellerStripeAccountId, buyerEmail } = req.body
     if (!sellerStripeAccountId) return res.status(400).json({ error: 'Seller has not connected Stripe' })
     const priceInCents = Math.round(price * 100)
-    const platformFee = Math.round(priceInCents * (PLATFORM_FEE_PERCENT / 100))
+    const platformFee = Math.round(priceInCents * (STRIPE_FEE_PERCENT / 100))
     const session = await stripe.checkout.sessions.create({ payment_method_types: ['card'], line_items: [{ price_data: { currency: 'usd', product_data: { name: listingTitle }, unit_amount: priceInCents }, quantity: 1 }], mode: 'payment', success_url: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/listing/' + listingId + '?purchase=success', cancel_url: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/listing/' + listingId + '?purchase=cancelled', customer_email: buyerEmail, payment_intent_data: { application_fee_amount: platformFee, transfer_data: { destination: sellerStripeAccountId } } })
     res.json({ url: session.url, sessionId: session.id })
   } catch (error) { res.status(500).json({ error: error.message }) }
@@ -51,6 +52,49 @@ app.post('/api/stripe/refresh-account-link', async (req, res) => {
     const { accountId } = req.body
     const accountLink = await stripe.accountLinks.create({ account: accountId, refresh_url: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/dashboard?stripe=refresh', return_url: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/dashboard?stripe=success&account=' + accountId, type: 'account_onboarding' })
     res.json({ url: accountLink.url })
+  } catch (error) { res.status(500).json({ error: error.message }) }
+})
+
+// Coinbase Commerce - Create Checkout
+app.post('/api/coinbase/create-checkout', async (req, res) => {
+  try {
+    const { listingId, listingTitle, price, sellerId, buyerEmail } = req.body
+    if (!process.env.COINBASE_COMMERCE_API_KEY) {
+      return res.status(500).json({ error: 'Coinbase Commerce not configured' })
+    }
+
+    const response = await fetch('https://api.commerce.coinbase.com/charges', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CC-Api-Key': process.env.COINBASE_COMMERCE_API_KEY,
+        'X-CC-Version': '2018-03-22'
+      },
+      body: JSON.stringify({
+        name: listingTitle,
+        description: `Purchase of ${listingTitle} on SwapAI`,
+        pricing_type: 'fixed_price',
+        local_price: {
+          amount: price.toString(),
+          currency: 'USD'
+        },
+        metadata: {
+          listing_id: listingId,
+          seller_id: sellerId,
+          buyer_email: buyerEmail,
+          platform_fee_percent: CRYPTO_FEE_PERCENT
+        },
+        redirect_url: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/listing/' + listingId + '?purchase=success&method=crypto',
+        cancel_url: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/listing/' + listingId + '?purchase=cancelled'
+      })
+    })
+
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'Failed to create Coinbase charge')
+    }
+
+    res.json({ url: data.data.hosted_url, chargeId: data.data.id })
   } catch (error) { res.status(500).json({ error: error.message }) }
 })
 
