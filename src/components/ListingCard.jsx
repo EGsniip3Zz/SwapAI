@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Star, ExternalLink } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 
 export default function ListingCard({ listing, isAd = false }) {
   const categoryColors = {
@@ -86,19 +86,10 @@ export default function ListingCard({ listing, isAd = false }) {
           {listing.short_description}
         </p>
 
-        <div className="flex items-center justify-between">
-          {/* Rating */}
-          <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-            <span className="text-sm text-slate-300">{listing.rating || '5.0'}</span>
-            <span className="text-sm text-slate-500">({listing.review_count || 0})</span>
-          </div>
-
-          {/* Seller */}
-          <span className="text-xs text-slate-500">
-            by {listing.profiles?.full_name || 'Anonymous'}
-          </span>
-        </div>
+        {/* Seller */}
+        <span className="text-xs text-slate-500">
+          by {listing.profiles?.full_name || 'Anonymous'}
+        </span>
       </div>
     </Link>
   )
