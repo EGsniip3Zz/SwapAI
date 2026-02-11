@@ -235,10 +235,10 @@ export default function Terms() {
             <section>
               <h2 className="text-2xl font-semibold text-white mb-4">13. Governing Law & Jurisdiction</h2>
               <p>
-                These Terms shall be governed by and construed in accordance with the laws of the State of
-                Delaware, United States, without regard to its conflict of law provisions. Any legal action
-                or proceeding arising under these Terms shall be brought exclusively in the federal or state
-                courts located in Delaware, and you hereby consent to personal jurisdiction and venue therein.
+                These Terms shall be governed by and construed in accordance with the laws of the Province of
+                British Columbia, Canada, without regard to its conflict of law provisions. Any legal action
+                or proceeding arising under these Terms shall be brought exclusively in the courts located in
+                British Columbia, Canada, and you hereby consent to personal jurisdiction and venue therein.
               </p>
             </section>
 

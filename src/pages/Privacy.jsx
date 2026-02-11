@@ -168,19 +168,25 @@ export default function Privacy() {
               <p>
                 Your information may be transferred to and maintained on servers located outside your
                 country of residence, where data protection laws may differ. By using our platform,
-                you consent to the transfer of your information to the United States and other
-                countries where we operate.
+                you consent to the transfer of your information to Canada, the United States, and other
+                countries where we or our service providers operate.
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-white mb-4">12. California Privacy Rights (CCPA)</h2>
+              <h2 className="text-2xl font-semibold text-white mb-4">12. Canadian & California Privacy Rights</h2>
+              <p className="mb-4">
+                <strong className="text-white">For Canadian Residents:</strong> We comply with the Personal
+                Information Protection and Electronic Documents Act (PIPEDA) and British Columbia's Personal
+                Information Protection Act (PIPA). You have the right to access your personal information,
+                request corrections, and withdraw consent for its use.
+              </p>
               <p>
-                If you are a California resident, you have specific rights under the California Consumer
-                Privacy Act (CCPA), including the right to know what personal information we collect,
-                request deletion of your data, and opt-out of the sale of your personal information.
-                As noted above, we do not sell personal information. To exercise your CCPA rights,
-                please contact us through our Support page.
+                <strong className="text-white">For California Residents:</strong> You have specific rights under
+                the California Consumer Privacy Act (CCPA), including the right to know what personal information
+                we collect, request deletion of your data, and opt-out of the sale of your personal information.
+                As noted above, we do not sell personal information. To exercise your rights, please contact us
+                through our Support page.
               </p>
             </section>
 
