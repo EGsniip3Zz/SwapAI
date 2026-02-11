@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { Link } from 'react-router-dom'
 import {
   Users, Package, AlertTriangle, CheckCircle, XCircle,
-  Trash2, Edit, Eye, Search, Filter, RefreshCw
+  Trash2, Edit, Eye, Search, Filter, RefreshCw, Ban, UserCheck
 } from 'lucide-react'
 
 export default function Admin() {
@@ -120,6 +121,41 @@ export default function Admin() {
     } catch (error) {
       console.error('Error updating user:', error)
       alert('Error updating user role')
+    }
+  }
+
+  const toggleBanUser = async (userId, currentlyBanned) => {
+    const action = currentlyBanned ? 'unban' : 'ban'
+    if (!confirm(`Are you sure you want to ${action} this user?`)) return
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ banned: !currentlyBanned })
+        .eq('id', userId)
+
+      if (error) throw error
+      fetchUsers()
+    } catch (error) {
+      console.error('Error updating user:', error)
+      alert(`Error ${action}ning user`)
+    }
+  }
+
+  const deleteUser = async (userId) => {
+    if (!confirm('Are you sure you want to delete this user? This will also delete all their listings and cannot be undone.')) return
+
+    try {
+      // Delete user's listings first
+      await supabase.from('listings').delete().eq('seller_id', userId)
+      // Delete user profile
+      const { error } = await supabase.from('profiles').delete().eq('id', userId)
+
+      if (error) throw error
+      fetchUsers()
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      alert('Error deleting user')
     }
   }
 
@@ -333,6 +369,13 @@ export default function Admin() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+                          <Link
+                            to={`/edit-listing/${listing.id}`}
+                            className="p-2 text-blue-400 hover:text-blue-300 transition-colors"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Link>
                           {listing.status !== 'approved' && (
                             <button
                               onClick={() => updateListingStatus(listing.id, 'approved')}
@@ -391,10 +434,17 @@ export default function Admin() {
                     <tr key={user.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-full flex items-center justify-center text-white font-bold">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                            user.banned ? 'bg-red-500/50' : 'bg-gradient-to-br from-violet-500 to-fuchsia-500'
+                          }`}>
                             {user.full_name?.charAt(0) || '?'}
                           </div>
-                          <p className="font-medium text-white">{user.full_name || 'Unnamed'}</p>
+                          <div>
+                            <p className="font-medium text-white">{user.full_name || 'Unnamed'}</p>
+                            {user.banned && (
+                              <span className="text-xs text-red-400">Banned</span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-300">
@@ -420,7 +470,24 @@ export default function Admin() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
-                          {/* Add more user actions as needed */}
+                          <button
+                            onClick={() => toggleBanUser(user.id, user.banned)}
+                            className={`p-2 transition-colors ${
+                              user.banned
+                                ? 'text-emerald-400 hover:text-emerald-300'
+                                : 'text-yellow-400 hover:text-yellow-300'
+                            }`}
+                            title={user.banned ? 'Unban User' : 'Ban User'}
+                          >
+                            {user.banned ? <UserCheck className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={() => deleteUser(user.id)}
+                            className="p-2 text-red-400 hover:text-red-300 transition-colors"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
