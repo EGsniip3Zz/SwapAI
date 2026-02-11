@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
-import { User, Package, Settings, Plus, Trash2, Eye, Camera, Lock, Save, X, CheckCircle, Edit, MessageSquare } from 'lucide-react'
+import { User, Package, Settings, Plus, Trash2, Eye, Camera, Lock, Save, X, CheckCircle, Edit, MessageSquare, CreditCard, ExternalLink } from 'lucide-react'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 export default function Dashboard() {
   const { user, profile, refreshProfile } = useAuth()
+  const [searchParams] = useSearchParams()
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
   const [unreadMessages, setUnreadMessages] = useState(0)
@@ -13,6 +16,8 @@ export default function Dashboard() {
   const [showSettings, setShowSettings] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
+  const [stripeConnecting, setStripeConnecting] = useState(false)
+  const [stripeStatus, setStripeStatus] = useState(null)
 
   // Edit form states
   const [fullName, setFullName] = useState('')
@@ -31,8 +36,68 @@ export default function Dashboard() {
     if (user) {
       fetchMyListings()
       fetchMessages()
+      checkStripeStatus()
     }
   }, [user])
+
+  // Check for Stripe redirect
+  useEffect(() => {
+    const stripeParam = searchParams.get('stripe')
+    const accountId = searchParams.get('account')
+
+    if (stripeParam === 'success' && accountId) {
+      // Save Stripe account ID to profile
+      saveStripeAccount(accountId)
+    } else if (stripeParam === 'refresh') {
+      setMessage({ type: 'error', text: 'Stripe setup was not completed. Please try again.' })
+    }
+  }, [searchParams])
+
+  const checkStripeStatus = async () => {
+    if (profile?.stripe_account_id) {
+      try {
+        const response = await fetch(`${API_URL}/api/stripe/account-status/${profile.stripe_account_id}`)
+        const data = await response.json()
+        setStripeStatus(data)
+      } catch (error) {
+        console.error('Error checking Stripe status:', error)
+      }
+    }
+  }
+
+  const saveStripeAccount = async (accountId) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ stripe_account_id: accountId })
+        .eq('id', user.id)
+
+      if (error) throw error
+      setMessage({ type: 'success', text: 'Stripe account connected successfully!' })
+      refreshProfile()
+    } catch (error) {
+      console.error('Error saving Stripe account:', error)
+      setMessage({ type: 'error', text: 'Error saving Stripe account' })
+    }
+  }
+
+  const connectStripe = async () => {
+    setStripeConnecting(true)
+    try {
+      const response = await fetch(`${API_URL}/api/stripe/create-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email, userId: user.id })
+      })
+      const data = await response.json()
+      if (data.error) throw new Error(data.error)
+      window.location.href = data.url
+    } catch (error) {
+      console.error('Error connecting Stripe:', error)
+      setMessage({ type: 'error', text: error.message || 'Error connecting Stripe' })
+      setStripeConnecting(false)
+    }
+  }
 
   const fetchMessages = async () => {
     try {
@@ -471,6 +536,95 @@ export default function Dashboard() {
             )}
           </Link>
         </div>
+
+        {/* Stripe Connect (for sellers) */}
+        {(profile?.role === 'seller' || profile?.role === 'admin') && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-violet-400" />
+              Payment Setup
+            </h2>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+              {profile?.stripe_account_id ? (
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-white">Stripe Connected</h3>
+                      <p className="text-sm text-slate-400">You can receive card payments (10% platform fee)</p>
+                    </div>
+                  </div>
+                  {stripeStatus && (
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div className="bg-slate-800 rounded-lg p-3">
+                        <p className="text-slate-400">Charges</p>
+                        <p className={stripeStatus.chargesEnabled ? 'text-emerald-400' : 'text-yellow-400'}>
+                          {stripeStatus.chargesEnabled ? 'Enabled' : 'Pending'}
+                        </p>
+                      </div>
+                      <div className="bg-slate-800 rounded-lg p-3">
+                        <p className="text-slate-400">Payouts</p>
+                        <p className={stripeStatus.payoutsEnabled ? 'text-emerald-400' : 'text-yellow-400'}>
+                          {stripeStatus.payoutsEnabled ? 'Enabled' : 'Pending'}
+                        </p>
+                      </div>
+                      <div className="bg-slate-800 rounded-lg p-3">
+                        <p className="text-slate-400">Details</p>
+                        <p className={stripeStatus.detailsSubmitted ? 'text-emerald-400' : 'text-yellow-400'}>
+                          {stripeStatus.detailsSubmitted ? 'Complete' : 'Incomplete'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {stripeStatus && !stripeStatus.chargesEnabled && (
+                    <button
+                      onClick={connectStripe}
+                      disabled={stripeConnecting}
+                      className="mt-4 flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 rounded-lg text-sm text-white transition-colors disabled:opacity-50"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Complete Stripe Setup
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center">
+                      <CreditCard className="w-5 h-5 text-slate-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-white">Connect Stripe</h3>
+                      <p className="text-sm text-slate-400">Accept card payments for your listings (10% platform fee)</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={connectStripe}
+                    disabled={stripeConnecting}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 rounded-lg text-white font-medium transition-all disabled:opacity-50"
+                  >
+                    {stripeConnecting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="w-4 h-4" />
+                        Connect with Stripe
+                      </>
+                    )}
+                  </button>
+                  <p className="text-xs text-slate-500 mt-3">
+                    Crypto payments (8.5% fee) are always available via Coinbase Commerce - no setup needed!
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Recent Messages */}
         {recentMessages.length > 0 && (
