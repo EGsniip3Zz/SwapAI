@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { MessageSquare, Send, ArrowLeft, User, X } from 'lucide-react'
+import { MessageSquare, Send, ArrowLeft, User, X, Paperclip, FileText, Image, Download } from 'lucide-react'
 
 export default function Messages() {
   const { user } = useAuth()
@@ -19,6 +19,12 @@ export default function Messages() {
   const [sellerInfo, setSellerInfo] = useState(null)
   const [listingInfo, setListingInfo] = useState(null)
   const [newConvoMessage, setNewConvoMessage] = useState('')
+
+  // File upload
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
+  const newConvoFileInputRef = useRef(null)
 
   useEffect(() => {
     if (user) {
@@ -131,45 +137,100 @@ export default function Messages() {
     }
   }
 
+  const handleFileSelect = (e, isNewConvo = false) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Max 10MB
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File size must be less than 10MB')
+        return
+      }
+      setSelectedFile(file)
+    }
+  }
+
+  const uploadFile = async (file) => {
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${user.id}-${Date.now()}.${fileExt}`
+    const filePath = `message-attachments/${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('uploads')
+      .upload(filePath, file)
+
+    if (uploadError) throw uploadError
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('uploads')
+      .getPublicUrl(filePath)
+
+    return { url: publicUrl, name: file.name, type: file.type, size: file.size }
+  }
+
   const sendMessage = async (e) => {
     e.preventDefault()
-    if (!newMessage.trim() || !selectedConvo) return
+    if ((!newMessage.trim() && !selectedFile) || !selectedConvo) return
 
     setSending(true)
+    setUploading(!!selectedFile)
+
     try {
+      let fileData = null
+      if (selectedFile) {
+        fileData = await uploadFile(selectedFile)
+      }
+
       const { error } = await supabase.from('messages').insert({
         sender_id: user.id,
         receiver_id: selectedConvo.otherUser.id,
         listing_id: selectedConvo.listing?.id || null,
-        content: newMessage.trim()
+        content: newMessage.trim() || (fileData ? `📎 Sent a file: ${fileData.name}` : ''),
+        file_url: fileData?.url || null,
+        file_name: fileData?.name || null,
+        file_type: fileData?.type || null
       })
 
       if (error) throw error
       setNewMessage('')
+      setSelectedFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
       fetchMessages(selectedConvo)
     } catch (err) {
       console.error('Error sending message:', err)
     } finally {
       setSending(false)
+      setUploading(false)
     }
   }
 
   const startNewConversation = async (e) => {
     e.preventDefault()
-    if (!newConvoMessage.trim() || !sellerInfo) return
+    if ((!newConvoMessage.trim() && !selectedFile) || !sellerInfo) return
 
     setSending(true)
+    setUploading(!!selectedFile)
+
     try {
+      let fileData = null
+      if (selectedFile) {
+        fileData = await uploadFile(selectedFile)
+      }
+
       const { error } = await supabase.from('messages').insert({
         sender_id: user.id,
         receiver_id: sellerInfo.id,
         listing_id: listingInfo?.id || null,
-        content: newConvoMessage.trim()
+        content: newConvoMessage.trim() || (fileData ? `📎 Sent a file: ${fileData.name}` : ''),
+        file_url: fileData?.url || null,
+        file_name: fileData?.name || null,
+        file_type: fileData?.type || null
       })
 
       if (error) throw error
 
       setNewConvoMessage('')
+      setSelectedFile(null)
+      if (newConvoFileInputRef.current) newConvoFileInputRef.current.value = ''
       setNewConvoMode(false)
       setSellerInfo(null)
       setListingInfo(null)
@@ -181,6 +242,7 @@ export default function Messages() {
       console.error('Error starting conversation:', err)
     } finally {
       setSending(false)
+      setUploading(false)
     }
   }
 
@@ -298,7 +360,43 @@ export default function Messages() {
                   </div>
 
                   <form onSubmit={startNewConversation} className="p-4 border-t border-slate-800">
+                    {/* Selected File Preview */}
+                    {selectedFile && (
+                      <div className="mb-2 p-2 bg-slate-800 rounded-lg flex items-center gap-2">
+                        {selectedFile.type.startsWith('image/') ? (
+                          <Image className="w-5 h-5 text-violet-400" />
+                        ) : (
+                          <FileText className="w-5 h-5 text-violet-400" />
+                        )}
+                        <span className="text-sm text-slate-300 truncate flex-1">{selectedFile.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedFile(null)
+                            if (newConvoFileInputRef.current) newConvoFileInputRef.current.value = ''
+                          }}
+                          className="text-slate-500 hover:text-white"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                     <div className="flex gap-2">
+                      <input
+                        type="file"
+                        ref={newConvoFileInputRef}
+                        onChange={(e) => handleFileSelect(e, true)}
+                        className="hidden"
+                        accept="image/*,.pdf,.doc,.docx,.txt,.zip,.rar"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => newConvoFileInputRef.current?.click()}
+                        className="px-3 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors"
+                        title="Attach file"
+                      >
+                        <Paperclip className="w-5 h-5" />
+                      </button>
                       <input
                         type="text"
                         value={newConvoMessage}
@@ -309,10 +407,14 @@ export default function Messages() {
                       />
                       <button
                         type="submit"
-                        disabled={sending || !newConvoMessage.trim()}
+                        disabled={sending || (!newConvoMessage.trim() && !selectedFile)}
                         className="px-4 py-3 bg-violet-600 hover:bg-violet-500 rounded-lg text-white disabled:opacity-50 transition-colors"
                       >
-                        <Send className="w-5 h-5" />
+                        {uploading ? (
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Send className="w-5 h-5" />
+                        )}
                       </button>
                     </div>
                   </form>
@@ -350,9 +452,30 @@ export default function Messages() {
                             msg.sender_id === user.id
                               ? 'bg-violet-600 text-white'
                               : 'bg-slate-800 text-white'
-                          }`}
+                          } ${msg.is_system_message ? 'border border-emerald-500/50 bg-emerald-900/30' : ''}`}
                         >
-                          <p>{msg.content}</p>
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                          {/* File Attachment */}
+                          {msg.file_url && (
+                            <div className={`mt-2 p-2 rounded-lg ${msg.sender_id === user.id ? 'bg-violet-700/50' : 'bg-slate-700/50'}`}>
+                              {msg.file_type?.startsWith('image/') ? (
+                                <a href={msg.file_url} target="_blank" rel="noopener noreferrer">
+                                  <img src={msg.file_url} alt={msg.file_name} className="max-w-full rounded-lg max-h-48 object-cover" />
+                                </a>
+                              ) : (
+                                <a
+                                  href={msg.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 hover:opacity-80"
+                                >
+                                  <FileText className="w-5 h-5 flex-shrink-0" />
+                                  <span className="text-sm truncate">{msg.file_name || 'Download File'}</span>
+                                  <Download className="w-4 h-4 flex-shrink-0" />
+                                </a>
+                              )}
+                            </div>
+                          )}
                           <p className={`text-xs mt-1 ${msg.sender_id === user.id ? 'text-violet-200' : 'text-slate-500'}`}>
                             {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
@@ -362,7 +485,43 @@ export default function Messages() {
                   </div>
 
                   <form onSubmit={sendMessage} className="p-4 border-t border-slate-800">
+                    {/* Selected File Preview */}
+                    {selectedFile && (
+                      <div className="mb-2 p-2 bg-slate-800 rounded-lg flex items-center gap-2">
+                        {selectedFile.type.startsWith('image/') ? (
+                          <Image className="w-5 h-5 text-violet-400" />
+                        ) : (
+                          <FileText className="w-5 h-5 text-violet-400" />
+                        )}
+                        <span className="text-sm text-slate-300 truncate flex-1">{selectedFile.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedFile(null)
+                            if (fileInputRef.current) fileInputRef.current.value = ''
+                          }}
+                          className="text-slate-500 hover:text-white"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                     <div className="flex gap-2">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={(e) => handleFileSelect(e)}
+                        className="hidden"
+                        accept="image/*,.pdf,.doc,.docx,.txt,.zip,.rar"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-3 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors"
+                        title="Attach file"
+                      >
+                        <Paperclip className="w-5 h-5" />
+                      </button>
                       <input
                         type="text"
                         value={newMessage}
@@ -372,10 +531,14 @@ export default function Messages() {
                       />
                       <button
                         type="submit"
-                        disabled={sending || !newMessage.trim()}
+                        disabled={sending || (!newMessage.trim() && !selectedFile)}
                         className="px-4 py-3 bg-violet-600 hover:bg-violet-500 rounded-lg text-white disabled:opacity-50 transition-colors"
                       >
-                        <Send className="w-5 h-5" />
+                        {uploading ? (
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Send className="w-5 h-5" />
+                        )}
                       </button>
                     </div>
                   </form>

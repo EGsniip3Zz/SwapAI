@@ -98,6 +98,83 @@ app.post('/api/coinbase/create-checkout', async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }) }
 })
 
+// Email notifications (optional - requires RESEND_API_KEY)
+app.post('/api/notifications/purchase', async (req, res) => {
+  try {
+    const { buyerEmail, buyerName, sellerEmail, sellerName, listingTitle, amount, paymentMethod, purchaseId } = req.body
+
+    if (!process.env.RESEND_API_KEY) {
+      // Email not configured, skip silently
+      return res.json({ success: true, message: 'Email notifications not configured' })
+    }
+
+    const emailPromises = []
+
+    // Email to buyer
+    emailPromises.push(
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
+        },
+        body: JSON.stringify({
+          from: 'SwapAI <notifications@' + (process.env.EMAIL_DOMAIN || 'swapai.app') + '>',
+          to: buyerEmail,
+          subject: `Purchase Confirmed: ${listingTitle}`,
+          html: `
+            <h2>Thanks for your purchase, ${buyerName}!</h2>
+            <p>Your order has been confirmed.</p>
+            <div style="background: #f4f4f4; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p><strong>Item:</strong> ${listingTitle}</p>
+              <p><strong>Amount:</strong> $${amount}</p>
+              <p><strong>Payment Method:</strong> ${paymentMethod === 'crypto' ? 'Cryptocurrency' : 'Card'}</p>
+              <p><strong>Order ID:</strong> ${purchaseId}</p>
+            </div>
+            <p>The seller has been notified and will reach out with delivery details. You can also message them directly through SwapAI.</p>
+            <p>Thanks for using SwapAI!</p>
+          `
+        })
+      })
+    )
+
+    // Email to seller
+    emailPromises.push(
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
+        },
+        body: JSON.stringify({
+          from: 'SwapAI <notifications@' + (process.env.EMAIL_DOMAIN || 'swapai.app') + '>',
+          to: sellerEmail,
+          subject: `New Sale: ${listingTitle}`,
+          html: `
+            <h2>Congratulations ${sellerName}! You made a sale! 🎉</h2>
+            <div style="background: #f4f4f4; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p><strong>Item Sold:</strong> ${listingTitle}</p>
+              <p><strong>Sale Amount:</strong> $${amount}</p>
+              <p><strong>Buyer:</strong> ${buyerName}</p>
+              <p><strong>Payment Method:</strong> ${paymentMethod === 'crypto' ? 'Cryptocurrency' : 'Card'}</p>
+              <p><strong>Order ID:</strong> ${purchaseId}</p>
+            </div>
+            <p>Please deliver the product to the buyer. A conversation has been automatically started - check your messages on SwapAI.</p>
+            <p>Thanks for selling on SwapAI!</p>
+          `
+        })
+      })
+    )
+
+    await Promise.all(emailPromises)
+    res.json({ success: true })
+
+  } catch (error) {
+    console.error('Email notification error:', error)
+    res.json({ success: false, error: error.message })
+  }
+})
+
 const PORT = process.env.PORT || 3001
 app.listen(PORT, '0.0.0.0', () => console.log('Server running on port ' + PORT))
 // force redeploy

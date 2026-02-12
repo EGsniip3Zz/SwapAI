@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useParams, Link, useSearchParams } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import {
@@ -11,7 +11,8 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 export default function ListingDetail() {
   const { id } = useParams()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [listing, setListing] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -20,7 +21,10 @@ export default function ListingDetail() {
   const [isSaved, setIsSaved] = useState(false)
   const [savingState, setSavingState] = useState(false)
   const [activeImage, setActiveImage] = useState(0)
+  const [purchaseRecorded, setPurchaseRecorded] = useState(false)
   const purchaseStatus = searchParams.get('purchase')
+  const paymentMethod = searchParams.get('method') || 'card'
+  const processedPurchase = useRef(false)
 
   useEffect(() => {
     fetchListing()
@@ -33,6 +37,105 @@ export default function ListingDetail() {
     }
   }, [user, listing])
 
+  // Handle successful purchase - record it and start conversation
+  useEffect(() => {
+    if (purchaseStatus === 'success' && user && listing && !processedPurchase.current) {
+      processedPurchase.current = true
+      recordPurchaseAndStartConversation()
+    }
+  }, [purchaseStatus, user, listing])
+
+  const recordPurchaseAndStartConversation = async () => {
+    try {
+      // Check if purchase already recorded (prevent duplicates)
+      const { data: existingPurchase } = await supabase
+        .from('purchases')
+        .select('id')
+        .eq('buyer_id', user.id)
+        .eq('listing_id', listing.id)
+        .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString()) // Within last 5 minutes
+        .single()
+
+      if (existingPurchase) {
+        setPurchaseRecorded(true)
+        return
+      }
+
+      // Record the purchase
+      const platformFee = paymentMethod === 'crypto' ? 8.5 : 10
+      const sellerAmount = listing.price * (1 - platformFee / 100)
+
+      const { data: purchase, error: purchaseError } = await supabase
+        .from('purchases')
+        .insert({
+          buyer_id: user.id,
+          seller_id: listing.profiles?.id,
+          listing_id: listing.id,
+          amount: listing.price,
+          platform_fee: listing.price * (platformFee / 100),
+          seller_amount: sellerAmount,
+          payment_method: paymentMethod,
+          status: 'completed'
+        })
+        .select()
+        .single()
+
+      if (purchaseError) throw purchaseError
+
+      // Auto-start conversation with purchase details
+      const autoMessage = `🎉 I just purchased "${listing.title}" for $${listing.price}!\n\nPayment Method: ${paymentMethod === 'crypto' ? 'Cryptocurrency' : 'Card'}\nOrder ID: ${purchase.id}\n\nLooking forward to receiving the delivery details. Thanks!`
+
+      await supabase.from('messages').insert({
+        sender_id: user.id,
+        receiver_id: listing.profiles?.id,
+        listing_id: listing.id,
+        content: autoMessage,
+        is_system_message: true
+      })
+
+      // Update listing purchase count
+      await supabase
+        .from('listings')
+        .update({ purchase_count: (listing.purchase_count || 0) + 1 })
+        .eq('id', listing.id)
+
+      // Send email notifications (optional - fails silently if not configured)
+      try {
+        // Get buyer and seller emails
+        const { data: buyerProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single()
+
+        await fetch(`${API_URL}/api/notifications/purchase`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            buyerEmail: user.email,
+            buyerName: buyerProfile?.full_name || 'Buyer',
+            sellerEmail: listing.profiles?.email || '',
+            sellerName: listing.profiles?.full_name || 'Seller',
+            listingTitle: listing.title,
+            amount: listing.price,
+            paymentMethod,
+            purchaseId: purchase.id
+          })
+        })
+      } catch (emailError) {
+        console.log('Email notification skipped:', emailError)
+      }
+
+      setPurchaseRecorded(true)
+
+      // Clear the URL params
+      setSearchParams({})
+
+    } catch (error) {
+      console.error('Error recording purchase:', error)
+    }
+  }
+
   const fetchListing = async () => {
     try {
       const { data, error } = await supabase
@@ -43,7 +146,8 @@ export default function ListingDetail() {
             id,
             full_name,
             avatar_url,
-            stripe_account_id
+            stripe_account_id,
+            email
           )
         `)
         .eq('id', id)
@@ -344,11 +448,20 @@ export default function ListingDetail() {
               {/* Purchase Success Message */}
               {purchaseStatus === 'success' && (
                 <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/50 rounded-lg">
-                  <div className="flex items-center gap-2 text-emerald-400 mb-1">
+                  <div className="flex items-center gap-2 text-emerald-400 mb-2">
                     <CheckCircle className="w-5 h-5" />
                     <span className="font-semibold">Purchase Successful!</span>
                   </div>
-                  <p className="text-sm text-slate-400">Thank you for your purchase. The seller will be notified.</p>
+                  <p className="text-sm text-slate-400 mb-3">
+                    Thank you for your purchase! A conversation has been started with the seller.
+                  </p>
+                  <Link
+                    to={`/messages?seller=${listing.profiles?.id}&listing=${listing.id}`}
+                    className="inline-flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 font-medium"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    View Messages
+                  </Link>
                 </div>
               )}
 
