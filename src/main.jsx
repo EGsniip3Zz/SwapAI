@@ -19,6 +19,7 @@ import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import Messages from './pages/Messages'
 import EditListing from './pages/EditListing'
+import FAQ from './pages/FAQ'
 import './index.css'
 
 function App() {
@@ -43,6 +44,7 @@ function App() {
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/messages" element={<Messages />} />
+          <Route path="/faq" element={<FAQ />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

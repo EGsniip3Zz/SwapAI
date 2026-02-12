@@ -164,24 +164,13 @@ export default function ListingDetail() {
 
   const incrementViews = async () => {
     try {
-      // Increment view count using RPC or direct update
-      await supabase.rpc('increment_listing_views', { listing_id: id })
-    } catch (error) {
-      // Fallback: direct increment if RPC doesn't exist
-      try {
-        const { data: current } = await supabase
-          .from('listings')
-          .select('views')
-          .eq('id', id)
-          .single()
-
-        await supabase
-          .from('listings')
-          .update({ views: (current?.views || 0) + 1 })
-          .eq('id', id)
-      } catch (err) {
-        console.error('Error incrementing views:', err)
+      // Use RPC function to bypass RLS and increment views
+      const { error } = await supabase.rpc('increment_listing_views', { listing_id: id })
+      if (error) {
+        console.log('View increment via RPC failed, RPC may not exist:', error.message)
       }
+    } catch (error) {
+      console.log('View increment error:', error)
     }
   }
 

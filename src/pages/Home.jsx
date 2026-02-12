@@ -275,6 +275,7 @@ export default function Home() {
               <Link to="/sell" className="text-slate-400 hover:text-white transition-colors text-sm">Sell</Link>
               <Link to="/support" className="text-slate-400 hover:text-white transition-colors text-sm">Support</Link>
               <Link to="/about" className="text-slate-400 hover:text-white transition-colors text-sm">About</Link>
+              <Link to="/faq" className="text-slate-400 hover:text-white transition-colors text-sm">FAQ</Link>
               <Link to="/terms" className="text-slate-400 hover:text-white transition-colors text-sm">Terms</Link>
             </div>
 
