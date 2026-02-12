@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
-import { User, Package, Settings, Plus, Trash2, Eye, Camera, Lock, Save, X, CheckCircle, Edit, MessageSquare, CreditCard, ExternalLink, Bitcoin, Bookmark } from 'lucide-react'
+import { User, Package, Settings, Plus, Trash2, Eye, Camera, Lock, Save, X, CheckCircle, Edit, MessageSquare, CreditCard, ExternalLink, Bitcoin, Bookmark, ShoppingBag, DollarSign } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -21,6 +21,8 @@ export default function Dashboard() {
   const [cryptoWallet, setCryptoWallet] = useState('')
   const [savingWallet, setSavingWallet] = useState(false)
   const [savedListings, setSavedListings] = useState([])
+  const [myPurchases, setMyPurchases] = useState([])
+  const [mySales, setMySales] = useState([])
 
   // Edit form states
   const [fullName, setFullName] = useState('')
@@ -41,6 +43,8 @@ export default function Dashboard() {
       fetchMessages()
       checkStripeStatus()
       fetchSavedListings()
+      fetchMyPurchases()
+      fetchMySales()
     }
   }, [user])
 
@@ -152,6 +156,36 @@ export default function Dashboard() {
       setSavedListings(savedListings.filter(s => s.id !== savedId))
     } catch (error) {
       console.error('Error removing saved listing:', error)
+    }
+  }
+
+  const fetchMyPurchases = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('purchases')
+        .select('*, listing:listings(id, title, emoji, short_description), seller:profiles!seller_id(full_name)')
+        .eq('buyer_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setMyPurchases(data || [])
+    } catch (error) {
+      console.error('Error fetching purchases:', error)
+    }
+  }
+
+  const fetchMySales = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('purchases')
+        .select('*, listing:listings(id, title, emoji), buyer:profiles!buyer_id(full_name)')
+        .eq('seller_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setMySales(data || [])
+    } catch (error) {
+      console.error('Error fetching sales:', error)
     }
   }
 
@@ -792,6 +826,129 @@ export default function Dashboard() {
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* My Purchases */}
+        {myPurchases.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-emerald-400" />
+              My Purchases
+            </h2>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-800">
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-400">Product</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-400">Seller</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-400">Amount</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-400">Date</th>
+                    <th className="text-right px-6 py-4 text-sm font-medium text-slate-400">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {myPurchases.map((purchase) => (
+                    <tr key={purchase.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                      <td className="px-6 py-4">
+                        <Link to={`/listing/${purchase.listing?.id}`} className="flex items-center gap-3 hover:opacity-80">
+                          <span className="text-2xl">{purchase.listing?.emoji || '🤖'}</span>
+                          <div>
+                            <p className="font-medium text-white">{purchase.listing?.title}</p>
+                            <p className="text-xs text-slate-500">{purchase.payment_method === 'free' ? 'Free' : purchase.payment_method}</p>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-300">
+                        {purchase.seller?.full_name || 'Unknown'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-300">
+                        {purchase.amount === 0 ? 'Free' : `$${purchase.amount}`}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-500">
+                        {new Date(purchase.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Link
+                          to={`/messages?seller=${purchase.seller_id}&listing=${purchase.listing?.id}`}
+                          className="inline-flex items-center gap-1 text-sm text-violet-400 hover:text-violet-300"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          Message
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* My Sales (for sellers) */}
+        {mySales.length > 0 && (profile?.role === 'seller' || profile?.role === 'admin') && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-emerald-400" />
+              My Sales
+            </h2>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+              <div className="p-4 border-b border-slate-800 bg-slate-800/50">
+                <div className="flex items-center gap-6">
+                  <div>
+                    <p className="text-sm text-slate-400">Total Sales</p>
+                    <p className="text-2xl font-bold text-white">{mySales.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400">Total Revenue</p>
+                    <p className="text-2xl font-bold text-emerald-400">
+                      ${mySales.reduce((sum, s) => sum + (s.seller_amount || 0), 0).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-800">
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-400">Product</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-400">Buyer</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-400">You Earned</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-400">Date</th>
+                    <th className="text-right px-6 py-4 text-sm font-medium text-slate-400">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mySales.map((sale) => (
+                    <tr key={sale.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                      <td className="px-6 py-4">
+                        <Link to={`/listing/${sale.listing?.id}`} className="flex items-center gap-3 hover:opacity-80">
+                          <span className="text-2xl">{sale.listing?.emoji || '🤖'}</span>
+                          <p className="font-medium text-white">{sale.listing?.title}</p>
+                        </Link>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-300">
+                        {sale.buyer?.full_name || 'Unknown'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-emerald-400 font-medium">
+                        {sale.seller_amount === 0 ? 'Free' : `$${sale.seller_amount?.toFixed(2)}`}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-500">
+                        {new Date(sale.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Link
+                          to={`/messages?seller=${sale.buyer_id}&listing=${sale.listing?.id}`}
+                          className="inline-flex items-center gap-1 text-sm text-violet-400 hover:text-violet-300"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          Message
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
