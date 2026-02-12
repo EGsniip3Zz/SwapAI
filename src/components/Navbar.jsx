@@ -34,14 +34,14 @@ export default function Navbar() {
             <Link to="/marketplace" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
               Marketplace
             </Link>
-            <Link to="/about" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
-              About
-            </Link>
             {isSeller && (
               <Link to="/sell" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
                 Sell a Tool
               </Link>
             )}
+            <Link to="/about" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
+              About
+            </Link>
             {isAdmin && (
               <Link to="/admin" className="text-fuchsia-400 hover:text-fuchsia-300 transition-colors text-sm font-medium">
                 Admin
@@ -107,14 +107,14 @@ export default function Navbar() {
               <Link to="/marketplace" className="text-slate-300 hover:text-white transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
                 Marketplace
               </Link>
-              <Link to="/about" className="text-slate-300 hover:text-white transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
-                About
-              </Link>
               {isSeller && (
                 <Link to="/sell" className="text-slate-300 hover:text-white transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
                   Sell a Tool
                 </Link>
               )}
+              <Link to="/about" className="text-slate-300 hover:text-white transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+                About
+              </Link>
               {isAdmin && (
                 <Link to="/admin" className="text-fuchsia-400 hover:text-fuchsia-300 transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
                   Admin
