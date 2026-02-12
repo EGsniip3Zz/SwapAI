@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
-import { User, Package, Settings, Plus, Trash2, Eye, Camera, Lock, Save, X, CheckCircle, Edit, MessageSquare, CreditCard, ExternalLink } from 'lucide-react'
+import { User, Package, Settings, Plus, Trash2, Eye, Camera, Lock, Save, X, CheckCircle, Edit, MessageSquare, CreditCard, ExternalLink, Bitcoin, Bookmark } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -18,6 +18,9 @@ export default function Dashboard() {
   const [message, setMessage] = useState({ type: '', text: '' })
   const [stripeConnecting, setStripeConnecting] = useState(false)
   const [stripeStatus, setStripeStatus] = useState(null)
+  const [cryptoWallet, setCryptoWallet] = useState('')
+  const [savingWallet, setSavingWallet] = useState(false)
+  const [savedListings, setSavedListings] = useState([])
 
   // Edit form states
   const [fullName, setFullName] = useState('')
@@ -37,8 +40,15 @@ export default function Dashboard() {
       fetchMyListings()
       fetchMessages()
       checkStripeStatus()
+      fetchSavedListings()
     }
   }, [user])
+
+  useEffect(() => {
+    if (profile?.crypto_wallet) {
+      setCryptoWallet(profile.crypto_wallet)
+    }
+  }, [profile])
 
   // Check for Stripe redirect
   useEffect(() => {
@@ -96,6 +106,52 @@ export default function Dashboard() {
       console.error('Error connecting Stripe:', error)
       setMessage({ type: 'error', text: error.message || 'Error connecting Stripe' })
       setStripeConnecting(false)
+    }
+  }
+
+  const saveCryptoWallet = async () => {
+    setSavingWallet(true)
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ crypto_wallet: cryptoWallet.trim() })
+        .eq('id', user.id)
+
+      if (error) throw error
+      setMessage({ type: 'success', text: 'Crypto wallet saved!' })
+      refreshProfile()
+    } catch (error) {
+      console.error('Error saving crypto wallet:', error)
+      setMessage({ type: 'error', text: 'Error saving crypto wallet' })
+    } finally {
+      setSavingWallet(false)
+    }
+  }
+
+  const fetchSavedListings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('saved_listings')
+        .select('*, listing:listings(id, title, emoji, price, price_type, short_description)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setSavedListings(data || [])
+    } catch (error) {
+      console.error('Error fetching saved listings:', error)
+    }
+  }
+
+  const removeSavedListing = async (savedId) => {
+    try {
+      await supabase
+        .from('saved_listings')
+        .delete()
+        .eq('id', savedId)
+      setSavedListings(savedListings.filter(s => s.id !== savedId))
+    } catch (error) {
+      console.error('Error removing saved listing:', error)
     }
   }
 
@@ -622,6 +678,38 @@ export default function Dashboard() {
                   </p>
                 </div>
               )}
+
+              {/* Crypto Wallet Section */}
+              <div className="mt-6 pt-6 border-t border-slate-800">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${profile?.crypto_wallet ? 'bg-orange-500/20' : 'bg-slate-800'}`}>
+                    <Bitcoin className={`w-5 h-5 ${profile?.crypto_wallet ? 'text-orange-400' : 'text-slate-400'}`} />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-white">Crypto Wallet</h3>
+                    <p className="text-sm text-slate-400">Add your wallet address to receive crypto payouts (8.5% fee)</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={cryptoWallet}
+                    onChange={(e) => setCryptoWallet(e.target.value)}
+                    placeholder="Enter your crypto wallet address (ETH, BTC, etc.)"
+                    className="flex-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                  <button
+                    onClick={saveCryptoWallet}
+                    disabled={savingWallet || !cryptoWallet.trim()}
+                    className="px-4 py-2 bg-orange-500 hover:bg-orange-400 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {savingWallet ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+                {profile?.crypto_wallet && (
+                  <p className="text-xs text-emerald-400 mt-2">✓ Wallet saved: {profile.crypto_wallet.slice(0, 10)}...{profile.crypto_wallet.slice(-8)}</p>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -667,6 +755,42 @@ export default function Dashboard() {
                     {new Date(msg.created_at).toLocaleDateString()}
                   </span>
                 </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Saved Listings */}
+        {savedListings.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+              <Bookmark className="w-5 h-5 text-violet-400" />
+              Saved Listings
+            </h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {savedListings.map((saved) => (
+                <div key={saved.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-violet-500/50 transition-all">
+                  <Link to={`/listing/${saved.listing?.id}`} className="block">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-2xl">{saved.listing?.emoji || '🤖'}</span>
+                      <h3 className="font-medium text-white truncate">{saved.listing?.title}</h3>
+                    </div>
+                    <p className="text-sm text-slate-400 line-clamp-2 mb-3">{saved.listing?.short_description}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-violet-400">
+                        {saved.listing?.price_type === 'free' ? 'Free' :
+                         saved.listing?.price_type === 'contact' ? 'Contact' :
+                         `$${saved.listing?.price}`}
+                      </span>
+                    </div>
+                  </Link>
+                  <button
+                    onClick={() => removeSavedListing(saved.id)}
+                    className="mt-3 w-full text-sm text-slate-500 hover:text-red-400 transition-colors"
+                  >
+                    Remove from saved
+                  </button>
+                </div>
               ))}
             </div>
           </div>

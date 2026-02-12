@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import {
   ExternalLink, ArrowLeft, Globe, Code,
-  MessageSquare, Shield, Clock, Users, Zap, CreditCard, Bitcoin, CheckCircle
+  MessageSquare, Shield, Clock, Users, Zap, CreditCard, Bitcoin, CheckCircle, Eye, Bookmark
 } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
@@ -17,11 +17,21 @@ export default function ListingDetail() {
   const [loading, setLoading] = useState(true)
   const [purchasing, setPurchasing] = useState(false)
   const [showPaymentOptions, setShowPaymentOptions] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
+  const [savingState, setSavingState] = useState(false)
+  const [activeImage, setActiveImage] = useState(0)
   const purchaseStatus = searchParams.get('purchase')
 
   useEffect(() => {
     fetchListing()
+    incrementViews()
   }, [id])
+
+  useEffect(() => {
+    if (user && listing) {
+      checkIfSaved()
+    }
+  }, [user, listing])
 
   const fetchListing = async () => {
     try {
@@ -45,6 +55,71 @@ export default function ListingDetail() {
       console.error('Error fetching listing:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const incrementViews = async () => {
+    try {
+      // Increment view count using RPC or direct update
+      await supabase.rpc('increment_listing_views', { listing_id: id })
+    } catch (error) {
+      // Fallback: direct increment if RPC doesn't exist
+      try {
+        const { data: current } = await supabase
+          .from('listings')
+          .select('views')
+          .eq('id', id)
+          .single()
+
+        await supabase
+          .from('listings')
+          .update({ views: (current?.views || 0) + 1 })
+          .eq('id', id)
+      } catch (err) {
+        console.error('Error incrementing views:', err)
+      }
+    }
+  }
+
+  const checkIfSaved = async () => {
+    try {
+      const { data } = await supabase
+        .from('saved_listings')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('listing_id', listing.id)
+        .single()
+
+      setIsSaved(!!data)
+    } catch (error) {
+      setIsSaved(false)
+    }
+  }
+
+  const toggleSave = async () => {
+    if (!user) return
+    setSavingState(true)
+
+    try {
+      if (isSaved) {
+        // Remove from saved
+        await supabase
+          .from('saved_listings')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('listing_id', listing.id)
+        setIsSaved(false)
+      } else {
+        // Add to saved
+        await supabase
+          .from('saved_listings')
+          .insert({ user_id: user.id, listing_id: listing.id })
+        setIsSaved(true)
+      }
+    } catch (error) {
+      console.error('Error toggling save:', error)
+    } finally {
+      setSavingState(false)
     }
   }
 
@@ -154,27 +229,67 @@ export default function ListingDetail() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Image */}
-            <div className="aspect-video bg-slate-800 rounded-2xl overflow-hidden">
-              {listing.image_url ? (
-                <img
-                  src={listing.image_url}
-                  alt={listing.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-600/20 to-fuchsia-600/20">
-                  <span className="text-8xl">{listing.emoji || '🤖'}</span>
+            {/* Image Gallery */}
+            <div className="space-y-3">
+              {/* Main Image */}
+              <div className="aspect-video bg-slate-800 rounded-2xl overflow-hidden">
+                {(listing.images?.length > 0 || listing.image_url) ? (
+                  <img
+                    src={listing.images?.[activeImage] || listing.image_url}
+                    alt={listing.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-600/20 to-fuchsia-600/20">
+                    <span className="text-8xl">{listing.emoji || '🤖'}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Thumbnail Gallery */}
+              {listing.images && listing.images.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {listing.images.map((img, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setActiveImage(index)}
+                      className={`flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all ${
+                        activeImage === index ? 'border-violet-500' : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={img} alt={`${listing.title} ${index + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
 
             {/* Title and Meta */}
             <div>
-              <div className="flex items-center gap-3 mb-3">
-                <span className="px-3 py-1 bg-violet-500/20 text-violet-400 rounded-full text-sm font-medium">
-                  {categoryLabels[listing.category] || 'Other'}
-                </span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <span className="px-3 py-1 bg-violet-500/20 text-violet-400 rounded-full text-sm font-medium">
+                    {categoryLabels[listing.category] || 'Other'}
+                  </span>
+                  <span className="flex items-center gap-1 text-sm text-slate-500">
+                    <Eye className="w-4 h-4" />
+                    {listing.views || 0} views
+                  </span>
+                </div>
+                {user && listing.profiles?.id !== user.id && (
+                  <button
+                    onClick={toggleSave}
+                    disabled={savingState}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      isSaved
+                        ? 'bg-violet-500/20 text-violet-400 border border-violet-500/50'
+                        : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+                    }`}
+                  >
+                    <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+                    {savingState ? 'Saving...' : isSaved ? 'Saved' : 'Save'}
+                  </button>
+                )}
               </div>
 
               <h1 className="text-3xl font-bold text-white mb-4">{listing.title}</h1>

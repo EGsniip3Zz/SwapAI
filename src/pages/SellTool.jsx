@@ -30,8 +30,8 @@ export default function SellTool() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const [imageFile, setImageFile] = useState(null)
-  const [imagePreview, setImagePreview] = useState(null)
+  const [imageFiles, setImageFiles] = useState([])
+  const [imagePreviews, setImagePreviews] = useState([])
   const [uploading, setUploading] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -83,7 +83,7 @@ export default function SellTool() {
             <button onClick={() => navigate(needsReview ? '/dashboard' : '/marketplace')} className="px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-lg text-white font-semibold">
               {needsReview ? 'View Dashboard' : 'View Marketplace'}
             </button>
-            <button onClick={() => { setSuccess(false); setNeedsReview(false); setImageFile(null); setImagePreview(null); setFormData({ title: '', short_description: '', description: '', category: 'text-nlp', emoji: '🤖', price_type: 'one-time', price: '', website_url: '', demo_url: '', docs_url: '', features: [''], tech_stack: [''], is_nsfw: false }); }} className="px-6 py-3 bg-slate-800 rounded-lg text-white font-medium">List Another Tool</button>
+            <button onClick={() => { setSuccess(false); setNeedsReview(false); setImageFiles([]); setImagePreviews([]); setFormData({ title: '', short_description: '', description: '', category: 'text-nlp', emoji: '🤖', price_type: 'one-time', price: '', website_url: '', demo_url: '', docs_url: '', features: [''], tech_stack: [''], is_nsfw: false }); }} className="px-6 py-3 bg-slate-800 rounded-lg text-white font-medium">List Another Tool</button>
           </div>
         </div>
       </div>
@@ -112,36 +112,62 @@ export default function SellTool() {
   }
 
   const handleImageSelect = (e) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { setError('Image must be less than 5MB'); return }
-      if (!file.type.startsWith('image/')) { setError('Please select an image file'); return }
-      setImageFile(file)
-      setImagePreview(URL.createObjectURL(file))
-      setError('')
+    const files = Array.from(e.target.files || [])
+    if (imageFiles.length + files.length > 5) {
+      setError('Maximum 5 images allowed')
+      return
     }
+
+    const validFiles = []
+    const validPreviews = []
+
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Each image must be less than 5MB')
+        return
+      }
+      if (!file.type.startsWith('image/')) {
+        setError('Please select only image files')
+        return
+      }
+      validFiles.push(file)
+      validPreviews.push(URL.createObjectURL(file))
+    }
+
+    setImageFiles([...imageFiles, ...validFiles])
+    setImagePreviews([...imagePreviews, ...validPreviews])
+    setError('')
   }
 
-  const uploadImage = async () => {
-    if (!imageFile) return null
+  const uploadImages = async () => {
+    if (imageFiles.length === 0) return []
     setUploading(true)
+    const uploadedUrls = []
+
     try {
-      const fileExt = imageFile.name.split('.').pop()
-      const fileName = user.id + '-' + Date.now() + '.' + fileExt
-      const filePath = 'listings/' + fileName
-      const { error: uploadError } = await supabase.storage.from('listing-images').upload(filePath, imageFile)
-      if (uploadError) throw uploadError
-      const { data } = supabase.storage.from('listing-images').getPublicUrl(filePath)
-      return data.publicUrl
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i]
+        const fileExt = file.name.split('.').pop()
+        const fileName = user.id + '-' + Date.now() + '-' + i + '.' + fileExt
+        const filePath = 'listings/' + fileName
+        const { error: uploadError } = await supabase.storage.from('listing-images').upload(filePath, file)
+        if (uploadError) throw uploadError
+        const { data } = supabase.storage.from('listing-images').getPublicUrl(filePath)
+        uploadedUrls.push(data.publicUrl)
+      }
+      return uploadedUrls
     } catch (error) {
       console.error('Upload error:', error)
-      throw new Error('Failed to upload image')
+      throw new Error('Failed to upload images')
     } finally {
       setUploading(false)
     }
   }
 
-  const removeImage = () => { setImageFile(null); setImagePreview(null) }
+  const removeImage = (index) => {
+    setImageFiles(imageFiles.filter((_, i) => i !== index))
+    setImagePreviews(imagePreviews.filter((_, i) => i !== index))
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -156,8 +182,9 @@ export default function SellTool() {
       const features = formData.features.filter(f => f.trim())
       const tech_stack = formData.tech_stack.filter(t => t.trim())
 
-      let imageUrl = null
-      if (imageFile) { imageUrl = await uploadImage() }
+      // Upload images
+      const imageUrls = await uploadImages()
+      const mainImageUrl = imageUrls.length > 0 ? imageUrls[0] : null
 
       const priceValue = formData.price_type === 'free' || formData.price_type === 'contact' ? 0 : Math.round(parseFloat(formData.price))
 
@@ -179,7 +206,8 @@ export default function SellTool() {
         docs_url: formData.docs_url.trim() || null,
         features: features.length > 0 ? features : null,
         tech_stack: tech_stack.length > 0 ? tech_stack : null,
-        image_url: imageUrl,
+        image_url: mainImageUrl,
+        images: imageUrls.length > 0 ? imageUrls : null,
         status: listingStatus,
         is_nsfw: formData.is_nsfw,
         review_count: 0,
@@ -250,26 +278,48 @@ export default function SellTool() {
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <ImageIcon className="w-5 h-5 text-violet-400" />
-              Product Image
+              Product Images
+              <span className="text-sm font-normal text-slate-500">({imagePreviews.length}/5)</span>
             </h2>
-            {imagePreview ? (
-              <div className="relative">
-                <img src={imagePreview} alt="Preview" className="w-full h-64 object-cover rounded-lg" />
-                <button type="button" onClick={removeImage} className="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 rounded-full text-white transition-colors">
-                  <X className="w-4 h-4" />
-                </button>
+
+            {/* Image Previews Grid */}
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative aspect-video bg-slate-800 rounded-lg overflow-hidden">
+                    <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-2 right-2 p-1.5 bg-red-500 hover:bg-red-600 rounded-full text-white transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    {index === 0 && (
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 bg-violet-500 text-white text-xs rounded">
+                        Main
+                      </span>
+                    )}
+                  </div>
+                ))}
               </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-800 transition-colors">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload className="w-10 h-10 text-slate-500 mb-3" />
-                  <p className="mb-2 text-sm text-slate-400"><span className="font-semibold text-violet-400">Click to upload</span> or drag and drop</p>
-                  <p className="text-xs text-slate-500">PNG, JPG, WEBP (MAX 5MB)</p>
+            )}
+
+            {/* Upload Button */}
+            {imagePreviews.length < 5 && (
+              <label className={`flex flex-col items-center justify-center w-full ${imagePreviews.length > 0 ? 'h-32' : 'h-64'} border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-800 transition-colors`}>
+                <div className="flex flex-col items-center justify-center py-4">
+                  <Upload className={`${imagePreviews.length > 0 ? 'w-6 h-6' : 'w-10 h-10'} text-slate-500 mb-2`} />
+                  <p className="text-sm text-slate-400">
+                    <span className="font-semibold text-violet-400">Click to upload</span>
+                    {imagePreviews.length === 0 && ' or drag and drop'}
+                  </p>
+                  <p className="text-xs text-slate-500">PNG, JPG, WEBP (MAX 5MB each)</p>
                 </div>
-                <input type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+                <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
               </label>
             )}
-            <p className="mt-2 text-xs text-slate-500">Recommended: 16:9 aspect ratio, at least 1280x720px</p>
+            <p className="mt-2 text-xs text-slate-500">First image will be the main image. Recommended: 16:9 aspect ratio, at least 1280x720px</p>
           </div>
 
           {/* Pricing */}
