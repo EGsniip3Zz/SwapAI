@@ -34,6 +34,9 @@ export default function Navbar() {
             <Link to="/marketplace" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
               Marketplace
             </Link>
+            <Link to="/about" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
+              About
+            </Link>
             {isSeller && (
               <Link to="/sell" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
                 Sell a Tool
@@ -103,6 +106,9 @@ export default function Navbar() {
               </Link>
               <Link to="/marketplace" className="text-slate-300 hover:text-white transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
                 Marketplace
+              </Link>
+              <Link to="/about" className="text-slate-300 hover:text-white transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+                About
               </Link>
               {isSeller && (
                 <Link to="/sell" className="text-slate-300 hover:text-white transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>

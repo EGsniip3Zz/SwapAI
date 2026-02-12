@@ -1,7 +1,7 @@
 import { Mail, MessageSquare, FileText, HelpCircle, ExternalLink } from 'lucide-react'
 
 export default function Support() {
-  const supportEmail = 'support@swapai.com' // Replace with your actual support email
+  const supportEmail = 'Support@swapai.shop'
 
   const faqs = [
     {

@@ -167,7 +167,7 @@ export default function FAQ() {
             <h3 className="text-xl font-semibold text-white mb-2">Still have questions?</h3>
             <p className="text-slate-400 mb-4">Can't find what you're looking for? Reach out to us!</p>
             <a
-              href="mailto:support@swapai.app"
+              href="mailto:Support@swapai.shop"
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 rounded-lg text-white font-medium transition-all"
             >
               Contact Support
