@@ -259,34 +259,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-lg flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-lg font-bold gradient-text-simple">SwapAI</span>
-            </div>
-
-            <div className="flex items-center gap-6">
-              <Link to="/marketplace" className="text-slate-400 hover:text-white transition-colors text-sm">Marketplace</Link>
-              <Link to="/sell" className="text-slate-400 hover:text-white transition-colors text-sm">Sell</Link>
-              <Link to="/support" className="text-slate-400 hover:text-white transition-colors text-sm">Support</Link>
-              <Link to="/about" className="text-slate-400 hover:text-white transition-colors text-sm">About</Link>
-              <Link to="/terms" className="text-slate-400 hover:text-white transition-colors text-sm">Terms</Link>
-            </div>
-
-            <p className="text-slate-400 text-sm italic mb-2">
-              "From Code to Close – Swap Ai"
-            </p>
-            <p className="text-slate-500 text-sm">
-              &copy; 2025 SwapAI. All rights reserved.
-            </p>
           </div>
-        </div>
-      </footer>
-    </div>
   )
 }
