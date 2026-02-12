@@ -279,6 +279,70 @@ export default function ListingDetail() {
     }
   }
 
+  const handleGetFree = async () => {
+    if (!user) return
+    setPurchasing(true)
+    try {
+      // Check if already claimed
+      const { data: existingPurchase } = await supabase
+        .from('purchases')
+        .select('id')
+        .eq('buyer_id', user.id)
+        .eq('listing_id', listing.id)
+        .single()
+
+      if (existingPurchase) {
+        alert('You already have this product!')
+        setPurchasing(false)
+        return
+      }
+
+      // Record the free purchase
+      const { data: purchase, error: purchaseError } = await supabase
+        .from('purchases')
+        .insert({
+          buyer_id: user.id,
+          seller_id: listing.profiles?.id,
+          listing_id: listing.id,
+          amount: 0,
+          platform_fee: 0,
+          seller_amount: 0,
+          payment_method: 'free',
+          status: 'completed'
+        })
+        .select()
+        .single()
+
+      if (purchaseError) throw purchaseError
+
+      // Auto-start conversation
+      const autoMessage = `🎉 I just got "${listing.title}" (Free)!\n\nOrder ID: ${purchase.id}\n\nLooking forward to using it. Thanks for sharing!`
+
+      await supabase.from('messages').insert({
+        sender_id: user.id,
+        receiver_id: listing.profiles?.id,
+        listing_id: listing.id,
+        content: autoMessage,
+        is_system_message: true
+      })
+
+      // Update listing purchase count
+      await supabase
+        .from('listings')
+        .update({ purchase_count: (listing.purchase_count || 0) + 1 })
+        .eq('id', listing.id)
+
+      // Navigate to messages
+      navigate(`/messages?seller=${listing.profiles?.id}&listing=${listing.id}`)
+
+    } catch (error) {
+      console.error('Error claiming free product:', error)
+      alert('Failed to claim product. Please try again.')
+    } finally {
+      setPurchasing(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 pt-20">
@@ -476,6 +540,27 @@ export default function ListingDetail() {
                   <p className="text-sm text-slate-500">Billed monthly, cancel anytime</p>
                 )}
               </div>
+
+              {/* Get Free Button */}
+              {listing.price_type === 'free' && user && listing.profiles?.id !== user.id && (
+                <button
+                  onClick={handleGetFree}
+                  disabled={purchasing}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-lg text-white font-semibold transition-all mb-4 disabled:opacity-50"
+                >
+                  {purchasing ? 'Processing...' : 'Get for Free'}
+                </button>
+              )}
+
+              {/* Login to Get Free */}
+              {listing.price_type === 'free' && !user && (
+                <Link
+                  to="/login"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-lg text-white font-semibold transition-all mb-4"
+                >
+                  Login to Get Free
+                </Link>
+              )}
 
               {/* Buy Button - shows payment options */}
               {listing.price_type !== 'free' && listing.price_type !== 'contact' && listing.price > 0 && user && listing.profiles?.id !== user.id && (
