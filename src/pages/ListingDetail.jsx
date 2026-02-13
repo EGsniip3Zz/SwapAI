@@ -765,9 +765,23 @@ export default function ListingDetail() {
             {user && listing.profiles?.id === user.id && (
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                 <h3 className="text-lg font-semibold text-white mb-2">Promote Your Listing</h3>
-                <p className="text-sm text-slate-400 mb-4">Add this badge to your website or GitHub to drive traffic.</p>
+                <p className="text-sm text-slate-400 mb-4">Share your listing or add this badge to your website.</p>
+
+                {/* Copy Link Button */}
+                <button
+                  onClick={copyLink}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg mb-4 font-medium transition-all ${
+                    copied
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
+                      : 'bg-slate-800 hover:bg-slate-700 text-white'
+                  }`}
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+                  {copied ? 'Link Copied!' : 'Copy Listing Link'}
+                </button>
 
                 {/* Badge Preview */}
+                <p className="text-xs text-slate-500 mb-2">Embeddable badge:</p>
                 <div className="bg-slate-800 rounded-lg p-4 mb-4 flex items-center justify-center">
                   <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-lg text-white text-sm font-medium">
                     <Zap className="w-4 h-4" />

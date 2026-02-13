@@ -201,12 +201,12 @@ export default function Home() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
-              { name: 'Text & NLP', count: '120+', emoji: '📝' },
-              { name: 'Image Gen', count: '85+', emoji: '🎨' },
-              { name: 'Voice & Audio', count: '45+', emoji: '🎙️' },
-              { name: 'Video', count: '60+', emoji: '🎬' },
-              { name: 'Data Analysis', count: '90+', emoji: '📊' },
-              { name: 'Automation', count: '75+', emoji: '⚡' },
+              { name: 'Text & NLP', emoji: '📝' },
+              { name: 'Image Gen', emoji: '🎨' },
+              { name: 'Voice & Audio', emoji: '🎙️' },
+              { name: 'Video', emoji: '🎬' },
+              { name: 'Data Analysis', emoji: '📊' },
+              { name: 'Automation', emoji: '⚡' },
             ].map((category, index) => (
               <Link
                 key={index}
@@ -214,8 +214,7 @@ export default function Home() {
                 className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center hover:border-violet-500/50 hover:bg-slate-800 transition-all duration-300 cursor-pointer group"
               >
                 <div className="text-3xl mb-2">{category.emoji}</div>
-                <div className="font-medium text-white text-sm mb-1">{category.name}</div>
-                <div className="text-xs text-slate-500">{category.count} tools</div>
+                <div className="font-medium text-white text-sm">{category.name}</div>
               </Link>
             ))}
           </div>
