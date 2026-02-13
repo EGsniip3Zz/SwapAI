@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { Zap, Menu, X, Home, User } from 'lucide-react'
+import { Zap, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 
 export default function Navbar() {
@@ -27,8 +27,7 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
-            <Link to="/" className="text-slate-300 hover:text-white transition-colors text-sm font-medium flex items-center gap-1">
-              <Home className="w-4 h-4" />
+            <Link to="/" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
               Home
             </Link>
             <Link to="/marketplace" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
@@ -48,8 +47,7 @@ export default function Navbar() {
               </Link>
             )}
             {user && (
-              <Link to="/dashboard" className="text-slate-300 hover:text-white transition-colors text-sm font-medium flex items-center gap-1">
-                <User className="w-4 h-4" />
+              <Link to="/dashboard" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
                 Profile
               </Link>
             )}
@@ -100,8 +98,7 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-slate-800">
             <div className="flex flex-col gap-4">
-              <Link to="/" className="text-slate-300 hover:text-white transition-colors text-sm font-medium flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
-                <Home className="w-4 h-4" />
+              <Link to="/" className="text-slate-300 hover:text-white transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
                 Home
               </Link>
               <Link to="/marketplace" className="text-slate-300 hover:text-white transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
@@ -121,8 +118,7 @@ export default function Navbar() {
                 </Link>
               )}
               {user && (
-                <Link to="/dashboard" className="text-slate-300 hover:text-white transition-colors text-sm font-medium flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
-                  <User className="w-4 h-4" />
+                <Link to="/dashboard" className="text-slate-300 hover:text-white transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
                   Profile
                 </Link>
               )}

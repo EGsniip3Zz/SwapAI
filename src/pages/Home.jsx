@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Zap, Star, Shield, Code, DollarSign, Users, ArrowRight } from 'lucide-react'
+import { Zap, Star, Shield, Code, DollarSign, Users, ArrowRight, BadgeCheck } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 
 export default function Home() {
@@ -52,17 +52,20 @@ export default function Home() {
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-8 max-w-3xl mx-auto mt-20 pt-12 border-t border-slate-800">
-            <div>
-              <div className="text-3xl sm:text-4xl font-bold text-white">500+</div>
-              <div className="text-sm text-slate-500 mt-1">AI Tools Listed</div>
+            <div className="text-center">
+              <Shield className="w-8 h-8 text-violet-400 mx-auto mb-2" />
+              <div className="text-lg font-semibold text-white">Secure Payments</div>
+              <div className="text-sm text-slate-500 mt-1">Stripe & Crypto</div>
             </div>
-            <div>
-              <div className="text-3xl sm:text-4xl font-bold text-white">10K+</div>
-              <div className="text-sm text-slate-500 mt-1">Active Users</div>
+            <div className="text-center">
+              <BadgeCheck className="w-8 h-8 text-fuchsia-400 mx-auto mb-2" />
+              <div className="text-lg font-semibold text-white">Verified Sellers</div>
+              <div className="text-sm text-slate-500 mt-1">Vetted creators</div>
             </div>
-            <div>
-              <div className="text-3xl sm:text-4xl font-bold text-white">$2M+</div>
-              <div className="text-sm text-slate-500 mt-1">Transaction Volume</div>
+            <div className="text-center">
+              <Zap className="w-8 h-8 text-amber-400 mx-auto mb-2" />
+              <div className="text-lg font-semibold text-white">Instant Delivery</div>
+              <div className="text-sm text-slate-500 mt-1">Download immediately</div>
             </div>
           </div>
         </div>
