@@ -4,7 +4,8 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import {
   ExternalLink, ArrowLeft, Globe, Code,
-  MessageSquare, Shield, Clock, Users, Zap, CreditCard, Bitcoin, CheckCircle, Eye, Bookmark
+  MessageSquare, Shield, Clock, Users, Zap, CreditCard, Bitcoin, CheckCircle, Eye, Bookmark,
+  Share2, Twitter, Linkedin, Link2, Copy, Check
 } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
@@ -22,6 +23,8 @@ export default function ListingDetail() {
   const [savingState, setSavingState] = useState(false)
   const [activeImage, setActiveImage] = useState(0)
   const [purchaseRecorded, setPurchaseRecorded] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [badgeCopied, setBadgeCopied] = useState(false)
   const purchaseStatus = searchParams.get('purchase')
   const paymentMethod = searchParams.get('method') || 'card'
   const processedPurchase = useRef(false)
@@ -214,6 +217,39 @@ export default function ListingDetail() {
     } finally {
       setSavingState(false)
     }
+  }
+
+  const getShareUrl = () => {
+    return `${window.location.origin}/listing/${id}`
+  }
+
+  const shareOnTwitter = () => {
+    const text = `Check out "${listing.title}" on SwapAI! 🚀`
+    const url = getShareUrl()
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank')
+  }
+
+  const shareOnLinkedIn = () => {
+    const url = getShareUrl()
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank')
+  }
+
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(getShareUrl())
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const getBadgeCode = () => {
+    const badgeUrl = `${window.location.origin}/api/badge/${id}`
+    const listingUrl = getShareUrl()
+    return `<a href="${listingUrl}" target="_blank"><img src="${badgeUrl}" alt="Available on SwapAI" /></a>`
+  }
+
+  const copyBadgeCode = async () => {
+    await navigator.clipboard.writeText(getBadgeCode())
+    setBadgeCopied(true)
+    setTimeout(() => setBadgeCopied(false), 2000)
   }
 
   const handleBuyWithCard = async () => {
@@ -450,7 +486,38 @@ export default function ListingDetail() {
               </div>
 
               <h1 className="text-3xl font-bold text-white mb-4">{listing.title}</h1>
-              <p className="text-lg text-slate-400">{listing.short_description}</p>
+              <p className="text-lg text-slate-400 mb-4">{listing.short_description}</p>
+
+              {/* Share Buttons */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-500 mr-2">Share:</span>
+                <button
+                  onClick={shareOnTwitter}
+                  className="p-2 bg-slate-800 hover:bg-[#1DA1F2] rounded-lg text-slate-400 hover:text-white transition-all"
+                  title="Share on Twitter"
+                >
+                  <Twitter className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={shareOnLinkedIn}
+                  className="p-2 bg-slate-800 hover:bg-[#0A66C2] rounded-lg text-slate-400 hover:text-white transition-all"
+                  title="Share on LinkedIn"
+                >
+                  <Linkedin className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={copyLink}
+                  className={`p-2 rounded-lg transition-all flex items-center gap-1 ${
+                    copied
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white'
+                  }`}
+                  title="Copy link"
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+                  {copied && <span className="text-xs">Copied!</span>}
+                </button>
+              </div>
             </div>
 
             {/* Full Description */}
@@ -693,6 +760,42 @@ export default function ListingDetail() {
                 </Link>
               )}
             </div>
+
+            {/* Badge Embed Section - Only for listing owner */}
+            {user && listing.profiles?.id === user.id && (
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-2">Promote Your Listing</h3>
+                <p className="text-sm text-slate-400 mb-4">Add this badge to your website or GitHub to drive traffic.</p>
+
+                {/* Badge Preview */}
+                <div className="bg-slate-800 rounded-lg p-4 mb-4 flex items-center justify-center">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-lg text-white text-sm font-medium">
+                    <Zap className="w-4 h-4" />
+                    Available on SwapAI
+                  </div>
+                </div>
+
+                {/* Embed Code */}
+                <div className="relative">
+                  <pre className="bg-slate-950 rounded-lg p-3 text-xs text-slate-400 overflow-x-auto">
+                    {getBadgeCode()}
+                  </pre>
+                  <button
+                    onClick={copyBadgeCode}
+                    className={`absolute top-2 right-2 p-1.5 rounded transition-all ${
+                      badgeCopied
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : 'bg-slate-700 hover:bg-slate-600 text-slate-400'
+                    }`}
+                  >
+                    {badgeCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                {badgeCopied && (
+                  <p className="text-xs text-emerald-400 mt-2">Copied to clipboard!</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -175,6 +175,42 @@ app.post('/api/notifications/purchase', async (req, res) => {
   }
 })
 
+// Badge Generator - SVG badge for embedding
+app.get('/api/badge/:listingId', async (req, res) => {
+  try {
+    const { listingId } = req.params
+    const { style } = req.query // 'flat' or 'gradient' (default)
+
+    // Generate SVG badge
+    const svg = style === 'flat' ? `
+      <svg xmlns="http://www.w3.org/2000/svg" width="160" height="28" viewBox="0 0 160 28">
+        <rect width="160" height="28" rx="4" fill="#1e1e2e"/>
+        <text x="28" y="18" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#ffffff">Available on SwapAI</text>
+        <path d="M12 8L14.5 13H9.5L12 8Z M12 20L9.5 15H14.5L12 20Z" fill="#a855f7"/>
+      </svg>
+    ` : `
+      <svg xmlns="http://www.w3.org/2000/svg" width="180" height="32" viewBox="0 0 180 32">
+        <defs>
+          <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#7c3aed"/>
+            <stop offset="100%" style="stop-color:#d946ef"/>
+          </linearGradient>
+        </defs>
+        <rect width="180" height="32" rx="6" fill="url(#grad)"/>
+        <text x="36" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#ffffff">Available on SwapAI</text>
+        <circle cx="16" cy="16" r="8" fill="rgba(255,255,255,0.2)"/>
+        <path d="M16 10L18.5 15H13.5L16 10Z M16 22L13.5 17H18.5L16 22Z" fill="#ffffff"/>
+      </svg>
+    `
+
+    res.setHeader('Content-Type', 'image/svg+xml')
+    res.setHeader('Cache-Control', 'public, max-age=86400') // Cache for 24 hours
+    res.send(svg.trim())
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
 const PORT = process.env.PORT || 3001
 app.listen(PORT, '0.0.0.0', () => console.log('Server running on port ' + PORT))
 // force redeploy
