@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import {
   Upload, Plus, X, AlertCircle, CheckCircle,
-  Image as ImageIcon, DollarSign, Tag, FileText, Link as LinkIcon, Zap
+  Image as ImageIcon, DollarSign, Tag, FileText, Link as LinkIcon, Zap, Package
 } from 'lucide-react'
 
 const categories = [
@@ -33,6 +33,8 @@ export default function SellTool() {
   const [imageFiles, setImageFiles] = useState([])
   const [imagePreviews, setImagePreviews] = useState([])
   const [uploading, setUploading] = useState(false)
+  const [deliverableFile, setDeliverableFile] = useState(null)
+  const [deliverableUploading, setDeliverableUploading] = useState(false)
 
   const [formData, setFormData] = useState({
     title: '',
@@ -169,6 +171,43 @@ export default function SellTool() {
     setImagePreviews(imagePreviews.filter((_, i) => i !== index))
   }
 
+  const handleDeliverableSelect = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 100 * 1024 * 1024) {
+      setError('Deliverable file must be less than 100MB')
+      return
+    }
+    setDeliverableFile(file)
+    setError('')
+  }
+
+  const uploadDeliverable = async () => {
+    if (!deliverableFile) return null
+    setDeliverableUploading(true)
+
+    try {
+      const fileExt = deliverableFile.name.split('.').pop()
+      const fileName = user.id + '-' + Date.now() + '-deliverable.' + fileExt
+      const filePath = 'deliverables/' + fileName
+
+      const { error: uploadError } = await supabase.storage
+        .from('listing-images')
+        .upload(filePath, deliverableFile)
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('listing-images').getPublicUrl(filePath)
+      return data.publicUrl
+    } catch (error) {
+      console.error('Deliverable upload error:', error)
+      throw new Error('Failed to upload deliverable file')
+    } finally {
+      setDeliverableUploading(false)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -185,6 +224,9 @@ export default function SellTool() {
       // Upload images
       const imageUrls = await uploadImages()
       const mainImageUrl = imageUrls.length > 0 ? imageUrls[0] : null
+
+      // Upload deliverable
+      const deliverableUrl = await uploadDeliverable()
 
       const priceValue = formData.price_type === 'free' || formData.price_type === 'contact' ? 0 : Math.round(parseFloat(formData.price))
 
@@ -208,6 +250,7 @@ export default function SellTool() {
         tech_stack: tech_stack.length > 0 ? tech_stack : null,
         image_url: mainImageUrl,
         images: imageUrls.length > 0 ? imageUrls : null,
+        deliverable_url: deliverableUrl,
         status: listingStatus,
         is_nsfw: formData.is_nsfw,
         review_count: 0,
@@ -322,6 +365,49 @@ export default function SellTool() {
             <p className="mt-2 text-xs text-slate-500">First image will be the main image. Recommended: 16:9 aspect ratio, at least 1280x720px</p>
           </div>
 
+          {/* Deliverable Upload */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Package className="w-5 h-5 text-violet-400" />
+              Product Deliverable
+            </h2>
+            <p className="text-sm text-slate-400 mb-4">
+              Upload the file buyers will receive after purchase (ZIP, PDF, etc.)
+            </p>
+
+            {deliverableFile ? (
+              <div className="flex items-center justify-between p-4 bg-slate-800 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-violet-500/20 rounded-lg flex items-center justify-center">
+                    <Package className="w-5 h-5 text-violet-400" />
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">{deliverableFile.name}</p>
+                    <p className="text-xs text-slate-500">{(deliverableFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDeliverableFile(null)}
+                  className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-800 transition-colors">
+                <div className="flex flex-col items-center justify-center py-4">
+                  <Upload className="w-8 h-8 text-slate-500 mb-2" />
+                  <p className="text-sm text-slate-400">
+                    <span className="font-semibold text-violet-400">Click to upload</span> deliverable
+                  </p>
+                  <p className="text-xs text-slate-500">ZIP, PDF, or any file (MAX 100MB)</p>
+                </div>
+                <input type="file" onChange={handleDeliverableSelect} className="hidden" />
+              </label>
+            )}
+          </div>
+
           {/* Pricing */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
@@ -433,8 +519,8 @@ export default function SellTool() {
             <p className="text-sm text-slate-500">
               {formData.is_nsfw ? 'NSFW listings require admin approval.' : 'Your listing will be live immediately.'}
             </p>
-            <button type="submit" disabled={loading || uploading} className="px-8 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 rounded-lg text-white font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-              {uploading ? 'Uploading Image...' : loading ? 'Submitting...' : 'Submit Listing'}
+            <button type="submit" disabled={loading || uploading || deliverableUploading} className="px-8 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 rounded-lg text-white font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+              {uploading ? 'Uploading Images...' : deliverableUploading ? 'Uploading Deliverable...' : loading ? 'Submitting...' : 'Submit Listing'}
             </button>
           </div>
         </form>
