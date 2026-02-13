@@ -8,6 +8,7 @@ export default function Signup() {
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [role, setRole] = useState('buyer')
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -21,6 +22,12 @@ export default function Signup() {
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters')
+      setLoading(false)
+      return
+    }
+
+    if (!agreedToTerms) {
+      setError('You must agree to the Terms of Service')
       setLoading(false)
       return
     }
@@ -173,9 +180,26 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* Terms of Service Checkbox */}
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="terms"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-1 w-4 h-4 rounded border-slate-600 bg-slate-800 text-violet-500 focus:ring-violet-500 focus:ring-offset-slate-900"
+              />
+              <label htmlFor="terms" className="text-sm text-slate-400">
+                I agree to the{' '}
+                <Link to="/terms" className="text-violet-400 hover:text-violet-300 underline" target="_blank">
+                  Terms of Service
+                </Link>
+              </label>
+            </div>
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !agreedToTerms}
               className="w-full py-3 px-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 rounded-lg text-white font-semibold transition-all duration-200 shadow-lg shadow-violet-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create Account'}
