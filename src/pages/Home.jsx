@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Zap, Star, Shield, Code, DollarSign, Users, ArrowRight, BadgeCheck } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import ListingsCarousel from '../components/ListingsCarousel'
 
 export default function Home() {
   const { user } = useAuth()
@@ -67,6 +68,30 @@ export default function Home() {
               <div className="text-lg font-semibold text-white">Instant Delivery</div>
               <div className="text-sm text-slate-500 mt-1">Download immediately</div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Listings Carousel */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+              Featured AI Tools
+            </h2>
+            <p className="text-slate-400">
+              Discover the most popular tools on SwapAI
+            </p>
+          </div>
+          <ListingsCarousel />
+          <div className="text-center mt-8">
+            <Link
+              to="/marketplace"
+              className="inline-flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 font-medium transition-colors"
+            >
+              View all tools
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </div>
       </section>

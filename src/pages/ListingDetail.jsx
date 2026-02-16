@@ -5,8 +5,9 @@ import { useAuth } from '../hooks/useAuth'
 import {
   ExternalLink, ArrowLeft, Globe, Code,
   MessageSquare, Shield, Clock, Users, Zap, CreditCard, Bitcoin, CheckCircle, Eye, Bookmark,
-  Share2, Twitter, Linkedin, Link2, Copy, Check
+  Share2, Twitter, Linkedin, Link2, Copy, Check, Tag
 } from 'lucide-react'
+import OfferModal from '../components/OfferModal'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -25,6 +26,7 @@ export default function ListingDetail() {
   const [purchaseRecorded, setPurchaseRecorded] = useState(false)
   const [copied, setCopied] = useState(false)
   const [badgeCopied, setBadgeCopied] = useState(false)
+  const [showOfferModal, setShowOfferModal] = useState(false)
   const purchaseStatus = searchParams.get('purchase')
   const paymentMethod = searchParams.get('method') || 'card'
   const processedPurchase = useRef(false)
@@ -368,6 +370,57 @@ export default function ListingDetail() {
     }
   }
 
+  const handleMakeOffer = async (offerAmount) => {
+    if (!user || !listing) return
+
+    try {
+      // Check for existing pending offer
+      const { data: existingOffer } = await supabase
+        .from('offers')
+        .select('id')
+        .eq('listing_id', listing.id)
+        .eq('buyer_id', user.id)
+        .eq('status', 'pending')
+        .single()
+
+      if (existingOffer) {
+        throw new Error('You already have a pending offer on this listing')
+      }
+
+      // Create the offer
+      const { data: offer, error: offerError } = await supabase
+        .from('offers')
+        .insert({
+          listing_id: listing.id,
+          buyer_id: user.id,
+          seller_id: listing.profiles.id,
+          amount: offerAmount,
+          status: 'pending'
+        })
+        .select()
+        .single()
+
+      if (offerError) throw offerError
+
+      // Create the offer message
+      const { error: msgError } = await supabase.from('messages').insert({
+        sender_id: user.id,
+        receiver_id: listing.profiles.id,
+        listing_id: listing.id,
+        content: `💰 Offer: $${offerAmount.toFixed(2)} for "${listing.title}" (listed at $${listing.price})`,
+        message_type: 'offer',
+        offer_id: offer.id
+      })
+
+      if (msgError) throw msgError
+
+      setShowOfferModal(false)
+      navigate(`/messages?seller=${listing.profiles.id}&listing=${listing.id}`)
+    } catch (error) {
+      throw error
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 pt-20">
@@ -661,6 +714,17 @@ export default function ListingDetail() {
                 </div>
               )}
 
+              {/* Make Offer Button */}
+              {listing.price_type !== 'free' && listing.price_type !== 'contact' && listing.price > 0 && user && listing.profiles?.id !== user.id && (
+                <button
+                  onClick={() => setShowOfferModal(true)}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-violet-500/50 rounded-lg text-white font-medium transition-all mb-4"
+                >
+                  <Tag className="w-4 h-4 text-violet-400" />
+                  Make an Offer
+                </button>
+              )}
+
               {/* Login to Buy */}
               {listing.price_type !== 'free' && listing.price_type !== 'contact' && listing.price > 0 && !user && (
                 <Link
@@ -813,6 +877,15 @@ export default function ListingDetail() {
           </div>
         </div>
       </div>
+
+      {/* Offer Modal */}
+      <OfferModal
+        isOpen={showOfferModal}
+        onClose={() => setShowOfferModal(false)}
+        onSubmit={handleMakeOffer}
+        listingPrice={listing.price}
+        listingTitle={listing.title}
+      />
     </div>
   )
 }

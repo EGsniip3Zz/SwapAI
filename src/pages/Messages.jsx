@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { MessageSquare, Send, ArrowLeft, User, X, Paperclip, FileText, Image, Download } from 'lucide-react'
+import { MessageSquare, Send, ArrowLeft, User, X, Paperclip, FileText, Image, Download, Tag, Check, XCircle, ArrowLeftRight, DollarSign } from 'lucide-react'
 
 export default function Messages() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [conversations, setConversations] = useState([])
   const [selectedConvo, setSelectedConvo] = useState(null)
@@ -26,6 +27,13 @@ export default function Messages() {
   const fileInputRef = useRef(null)
   const newConvoFileInputRef = useRef(null)
 
+  // Offer handling
+  const [processingOffer, setProcessingOffer] = useState(null) // offer id being processed
+  const [showCounterInput, setShowCounterInput] = useState(null) // offer id showing counter
+  const [counterAmount, setCounterAmount] = useState('')
+
+  const messagesEndRef = useRef(null)
+
   useEffect(() => {
     if (user) {
       fetchConversations()
@@ -36,6 +44,10 @@ export default function Messages() {
   useEffect(() => {
     if (selectedConvo) fetchMessages(selectedConvo)
   }, [selectedConvo])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   const checkForNewConvo = async () => {
     const sellerId = searchParams.get('seller')
@@ -246,11 +258,258 @@ export default function Messages() {
     }
   }
 
+  // === OFFER HANDLERS ===
+
+  const handleAcceptOffer = async (offerId, offerAmount) => {
+    setProcessingOffer(offerId)
+    try {
+      // Update offer status
+      await supabase
+        .from('offers')
+        .update({ status: 'accepted', updated_at: new Date().toISOString() })
+        .eq('id', offerId)
+
+      // Send acceptance message
+      await supabase.from('messages').insert({
+        sender_id: user.id,
+        receiver_id: selectedConvo.otherUser.id,
+        listing_id: selectedConvo.listing?.id || null,
+        content: `✅ Offer accepted! $${offerAmount} for "${selectedConvo.listing?.title || 'this listing'}"`,
+        message_type: 'accept',
+        offer_id: offerId,
+        is_system_message: true
+      })
+
+      fetchMessages(selectedConvo)
+    } catch (err) {
+      console.error('Error accepting offer:', err)
+    } finally {
+      setProcessingOffer(null)
+    }
+  }
+
+  const handleDeclineOffer = async (offerId) => {
+    setProcessingOffer(offerId)
+    try {
+      await supabase
+        .from('offers')
+        .update({ status: 'declined', updated_at: new Date().toISOString() })
+        .eq('id', offerId)
+
+      await supabase.from('messages').insert({
+        sender_id: user.id,
+        receiver_id: selectedConvo.otherUser.id,
+        listing_id: selectedConvo.listing?.id || null,
+        content: '❌ Offer declined.',
+        message_type: 'decline',
+        offer_id: offerId,
+        is_system_message: true
+      })
+
+      fetchMessages(selectedConvo)
+    } catch (err) {
+      console.error('Error declining offer:', err)
+    } finally {
+      setProcessingOffer(null)
+    }
+  }
+
+  const handleCounterOffer = async (offerId) => {
+    const counterVal = parseFloat(counterAmount)
+    if (!counterVal || counterVal <= 0) return
+
+    setProcessingOffer(offerId)
+    try {
+      // Update existing offer with counter
+      await supabase
+        .from('offers')
+        .update({ amount: counterVal, status: 'countered', updated_at: new Date().toISOString() })
+        .eq('id', offerId)
+
+      // Create new offer row for the counter
+      const { data: newOffer } = await supabase
+        .from('offers')
+        .insert({
+          listing_id: selectedConvo.listing?.id,
+          buyer_id: selectedConvo.otherUser.id,
+          seller_id: user.id,
+          amount: counterVal,
+          status: 'pending'
+        })
+        .select()
+        .single()
+
+      await supabase.from('messages').insert({
+        sender_id: user.id,
+        receiver_id: selectedConvo.otherUser.id,
+        listing_id: selectedConvo.listing?.id || null,
+        content: `🔄 Counter offer: $${counterVal.toFixed(2)}`,
+        message_type: 'counter',
+        offer_id: newOffer?.id || offerId,
+        is_system_message: false
+      })
+
+      setShowCounterInput(null)
+      setCounterAmount('')
+      fetchMessages(selectedConvo)
+    } catch (err) {
+      console.error('Error countering offer:', err)
+    } finally {
+      setProcessingOffer(null)
+    }
+  }
+
   const cancelNewConvo = () => {
     setNewConvoMode(false)
     setSellerInfo(null)
     setListingInfo(null)
     setNewConvoMessage('')
+  }
+
+  // Check if this is the latest offer/counter message for a given offer_id
+  const isLatestOfferMessage = (msg) => {
+    if (!msg.offer_id) return false
+    // Find all offer-type messages with same offer_id
+    const offerMsgs = messages.filter(m =>
+      m.offer_id === msg.offer_id &&
+      (m.message_type === 'offer' || m.message_type === 'counter')
+    )
+    // Return true only for the last one
+    return offerMsgs[offerMsgs.length - 1]?.id === msg.id
+  }
+
+  // Check if an offer has been resolved (accepted/declined/countered)
+  const isOfferResolved = (offerId) => {
+    return messages.some(m =>
+      m.offer_id === offerId &&
+      (m.message_type === 'accept' || m.message_type === 'decline')
+    )
+  }
+
+  // Render offer message bubble
+  const renderOfferMessage = (msg) => {
+    const isOwn = msg.sender_id === user.id
+    const isLatest = isLatestOfferMessage(msg)
+    const resolved = isOfferResolved(msg.offer_id)
+    const showActions = !isOwn && isLatest && !resolved && (msg.message_type === 'offer' || msg.message_type === 'counter')
+
+    // Extract amount from content
+    const amountMatch = msg.content.match(/\$([0-9,.]+)/)
+    const offerAmount = amountMatch ? amountMatch[1] : '?'
+
+    return (
+      <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+        <div className="max-w-[80%]">
+          {/* Offer Card */}
+          <div className={`rounded-2xl overflow-hidden ${
+            msg.message_type === 'accept'
+              ? 'border border-emerald-500/50 bg-emerald-900/20'
+              : msg.message_type === 'decline'
+              ? 'border border-red-500/50 bg-red-900/20'
+              : 'border border-violet-500/50 bg-violet-900/20'
+          }`}>
+            <div className="px-4 py-3">
+              {/* Offer header */}
+              <div className="flex items-center gap-2 mb-2">
+                {msg.message_type === 'offer' && <Tag className="w-4 h-4 text-violet-400" />}
+                {msg.message_type === 'counter' && <ArrowLeftRight className="w-4 h-4 text-orange-400" />}
+                {msg.message_type === 'accept' && <Check className="w-4 h-4 text-emerald-400" />}
+                {msg.message_type === 'decline' && <XCircle className="w-4 h-4 text-red-400" />}
+                <span className="text-xs font-medium text-slate-400">
+                  {msg.message_type === 'offer' && (isOwn ? 'You made an offer' : `${msg.sender?.full_name} made an offer`)}
+                  {msg.message_type === 'counter' && (isOwn ? 'You countered' : `${msg.sender?.full_name} countered`)}
+                  {msg.message_type === 'accept' && 'Offer accepted'}
+                  {msg.message_type === 'decline' && 'Offer declined'}
+                </span>
+              </div>
+
+              {/* Amount */}
+              {(msg.message_type === 'offer' || msg.message_type === 'counter') && (
+                <div className="text-2xl font-bold text-white mb-1">${offerAmount}</div>
+              )}
+
+              <p className="text-sm text-slate-400 whitespace-pre-wrap">{msg.content}</p>
+
+              {/* Timestamp */}
+              <p className="text-xs text-slate-600 mt-2">
+                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
+
+            {/* Action Buttons - only for receiver on latest pending offer */}
+            {showActions && (
+              <div className="border-t border-slate-700/50 p-3">
+                {showCounterInput === msg.offer_id ? (
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={counterAmount}
+                        onChange={(e) => setCounterAmount(e.target.value)}
+                        placeholder="Your price..."
+                        className="w-full pl-8 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        autoFocus
+                      />
+                    </div>
+                    <button
+                      onClick={() => handleCounterOffer(msg.offer_id)}
+                      disabled={processingOffer === msg.offer_id}
+                      className="px-4 py-2 bg-orange-600 hover:bg-orange-500 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      Send
+                    </button>
+                    <button
+                      onClick={() => { setShowCounterInput(null); setCounterAmount('') }}
+                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 text-sm transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleAcceptOffer(msg.offer_id, offerAmount)}
+                      disabled={processingOffer === msg.offer_id}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      <Check className="w-4 h-4" />
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleDeclineOffer(msg.offer_id)}
+                      disabled={processingOffer === msg.offer_id}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-700 hover:bg-red-600 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Decline
+                    </button>
+                    <button
+                      onClick={() => setShowCounterInput(msg.offer_id)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-700 hover:bg-orange-600 rounded-lg text-white text-sm font-medium transition-colors"
+                    >
+                      <ArrowLeftRight className="w-4 h-4" />
+                      Counter
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Status badge for sender */}
+            {isOwn && isLatest && !resolved && (msg.message_type === 'offer' || msg.message_type === 'counter') && (
+              <div className="border-t border-slate-700/50 px-4 py-2">
+                <span className="text-xs text-slate-500 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+                  Waiting for response...
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (!user) {
@@ -442,46 +701,55 @@ export default function Messages() {
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${msg.sender_id === user.id ? 'justify-end' : 'justify-start'}`}
-                      >
+                    {messages.map((msg) => {
+                      // Render offer-type messages differently
+                      if (msg.message_type && msg.message_type !== 'text') {
+                        return <div key={msg.id}>{renderOfferMessage(msg)}</div>
+                      }
+
+                      // Normal message
+                      return (
                         <div
-                          className={`max-w-[70%] px-4 py-2 rounded-2xl ${
-                            msg.sender_id === user.id
-                              ? 'bg-violet-600 text-white'
-                              : 'bg-slate-800 text-white'
-                          } ${msg.is_system_message ? 'border border-emerald-500/50 bg-emerald-900/30' : ''}`}
+                          key={msg.id}
+                          className={`flex ${msg.sender_id === user.id ? 'justify-end' : 'justify-start'}`}
                         >
-                          <p className="whitespace-pre-wrap">{msg.content}</p>
-                          {/* File Attachment */}
-                          {msg.file_url && (
-                            <div className={`mt-2 p-2 rounded-lg ${msg.sender_id === user.id ? 'bg-violet-700/50' : 'bg-slate-700/50'}`}>
-                              {msg.file_type?.startsWith('image/') ? (
-                                <a href={msg.file_url} target="_blank" rel="noopener noreferrer">
-                                  <img src={msg.file_url} alt={msg.file_name} className="max-w-full rounded-lg max-h-48 object-cover" />
-                                </a>
-                              ) : (
-                                <a
-                                  href={msg.file_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-2 hover:opacity-80"
-                                >
-                                  <FileText className="w-5 h-5 flex-shrink-0" />
-                                  <span className="text-sm truncate">{msg.file_name || 'Download File'}</span>
-                                  <Download className="w-4 h-4 flex-shrink-0" />
-                                </a>
-                              )}
-                            </div>
-                          )}
-                          <p className={`text-xs mt-1 ${msg.sender_id === user.id ? 'text-violet-200' : 'text-slate-500'}`}>
-                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
+                          <div
+                            className={`max-w-[70%] px-4 py-2 rounded-2xl ${
+                              msg.sender_id === user.id
+                                ? 'bg-violet-600 text-white'
+                                : 'bg-slate-800 text-white'
+                            } ${msg.is_system_message ? 'border border-emerald-500/50 bg-emerald-900/30' : ''}`}
+                          >
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                            {/* File Attachment */}
+                            {msg.file_url && (
+                              <div className={`mt-2 p-2 rounded-lg ${msg.sender_id === user.id ? 'bg-violet-700/50' : 'bg-slate-700/50'}`}>
+                                {msg.file_type?.startsWith('image/') ? (
+                                  <a href={msg.file_url} target="_blank" rel="noopener noreferrer">
+                                    <img src={msg.file_url} alt={msg.file_name} className="max-w-full rounded-lg max-h-48 object-cover" />
+                                  </a>
+                                ) : (
+                                  <a
+                                    href={msg.file_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 hover:opacity-80"
+                                  >
+                                    <FileText className="w-5 h-5 flex-shrink-0" />
+                                    <span className="text-sm truncate">{msg.file_name || 'Download File'}</span>
+                                    <Download className="w-4 h-4 flex-shrink-0" />
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                            <p className={`text-xs mt-1 ${msg.sender_id === user.id ? 'text-violet-200' : 'text-slate-500'}`}>
+                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
+                    <div ref={messagesEndRef} />
                   </div>
 
                   <form onSubmit={sendMessage} className="p-4 border-t border-slate-800">
