@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
@@ -35,6 +35,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/marketplace" element={<Marketplace />} />
+          <Route path="/buy" element={<Navigate to="/marketplace" replace />} />
           <Route path="/listing/:id" element={<ListingDetail />} />
           <Route path="/sell" element={<SellTool />} />
           <Route path="/edit-listing/:id" element={<EditListing />} />

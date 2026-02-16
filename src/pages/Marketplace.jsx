@@ -111,14 +111,8 @@ export default function Marketplace() {
     listing.short_description?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  // Insert ad placeholders every 6 listings
-  const listingsWithAds = []
-  filteredListings.forEach((listing, index) => {
-    listingsWithAds.push(listing)
-    if ((index + 1) % 6 === 0) {
-      listingsWithAds.push({ id: `ad-${index}`, isAd: true })
-    }
-  })
+  // Simple listing array (no ads)
+  const listingsWithAds = [...filteredListings]
 
   return (
     <div className="min-h-screen bg-slate-950 pt-20">

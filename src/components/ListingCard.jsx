@@ -22,23 +22,6 @@ export default function ListingCard({ listing, isAd = false }) {
     'other': 'Other',
   }
 
-  if (isAd) {
-    return (
-      <div className="relative bg-slate-900/50 border border-slate-700 rounded-2xl overflow-hidden group hover:border-slate-600 transition-all duration-300">
-        <div className="absolute top-3 right-3 px-2 py-1 bg-slate-700 rounded text-xs text-slate-400">
-          Sponsored
-        </div>
-        <div className="aspect-video bg-gradient-to-br from-violet-600/20 to-fuchsia-600/20 flex items-center justify-center">
-          <span className="text-slate-500 text-sm">Ad Placement</span>
-        </div>
-        <div className="p-4">
-          <h3 className="font-semibold text-white mb-1">Featured Tool</h3>
-          <p className="text-sm text-slate-400 line-clamp-2">Premium ad space for featured listings</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <Link
       to={`/listing/${listing.id}`}
