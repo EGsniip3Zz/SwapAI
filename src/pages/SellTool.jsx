@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -35,6 +35,12 @@ export default function SellTool() {
   const [uploading, setUploading] = useState(false)
   const [deliverableFile, setDeliverableFile] = useState(null)
   const [deliverableUploading, setDeliverableUploading] = useState(false)
+
+  useEffect(() => {
+    document.title = 'Sell Your AI Tool or Business | SwapAi'
+    const meta = document.querySelector('meta[name="description"]')
+    if (meta) meta.setAttribute('content', 'List your AI chatbot, workflow, or SaaS tool on SwapAi and connect with serious buyers. Fast, secure exits for AI creators.')
+  }, [])
 
   const [formData, setFormData] = useState({
     title: '',

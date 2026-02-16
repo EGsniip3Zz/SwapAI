@@ -39,6 +39,12 @@ export default function Marketplace() {
   const [availableCategories, setAvailableCategories] = useState([])
 
   useEffect(() => {
+    document.title = 'Buy AI Tools & MRR Businesses | SwapAi'
+    const meta = document.querySelector('meta[name="description"]')
+    if (meta) meta.setAttribute('content', 'Browse profitable AI chatbots, workflows, SaaS tools and recurring revenue assets for sale. Serious buyers only.')
+  }, [])
+
+  useEffect(() => {
     fetchListings()
   }, [selectedCategory, selectedPrice, selectedSort])
 

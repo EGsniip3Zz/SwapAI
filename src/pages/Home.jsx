@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Zap, Star, Shield, Code, DollarSign, Users, ArrowRight, BadgeCheck } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
@@ -5,6 +6,12 @@ import ListingsCarousel from '../components/ListingsCarousel'
 
 export default function Home() {
   const { user } = useAuth()
+
+  useEffect(() => {
+    document.title = 'SwapAi — Buy & Sell Profitable AI Tools, Chatbots & MRR Businesses'
+    const meta = document.querySelector('meta[name="description"]')
+    if (meta) meta.setAttribute('content', 'Marketplace for acquiring and exiting AI tools, chatbots, workflows, and recurring revenue assets. Browse listings or list your AI asset today.')
+  }, [])
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -17,6 +24,28 @@ export default function Home() {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-violet-600/10 to-fuchsia-600/10 rounded-full blur-3xl" />
         </div>
 
+        {/* Social Icons - Top Right */}
+        <div className="absolute top-4 right-4 sm:right-8 flex items-center gap-3 z-10">
+          <a
+            href="https://x.com/SwapAi_Shop"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-9 h-9 bg-slate-800/70 hover:bg-slate-700 border border-slate-700/50 rounded-lg flex items-center justify-center text-slate-400 hover:text-white transition-all"
+            title="Follow us on X"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a
+            href="https://www.instagram.com/swapaishop"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-9 h-9 bg-slate-800/70 hover:bg-slate-700 border border-slate-700/50 rounded-lg flex items-center justify-center text-slate-400 hover:text-white transition-all"
+            title="Follow us on Instagram"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+          </a>
+        </div>
+
         <div className="relative max-w-7xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 border border-slate-700/50 mb-8">
             <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
@@ -24,9 +53,9 @@ export default function Home() {
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-6">
-            <span className="block text-white">The Premier Marketplace</span>
+            <span className="block text-white">The Marketplace for</span>
             <span className="block bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
-              for AI Tools
+              AI Revenue Generators
             </span>
           </h1>
 

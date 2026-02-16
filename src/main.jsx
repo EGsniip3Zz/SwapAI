@@ -21,6 +21,8 @@ import Privacy from './pages/Privacy'
 import Messages from './pages/Messages'
 import EditListing from './pages/EditListing'
 import FAQ from './pages/FAQ'
+import Blog from './pages/Blog'
+import ForBuyers from './pages/ForBuyers'
 import './index.css'
 
 function App() {
@@ -47,6 +49,8 @@ function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/faq" element={<FAQ />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/for-buyers" element={<ForBuyers />} />
         </Routes>
         <Footer />
       </BrowserRouter>
