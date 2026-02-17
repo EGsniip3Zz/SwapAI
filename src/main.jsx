@@ -23,6 +23,7 @@ import EditListing from './pages/EditListing'
 import FAQ from './pages/FAQ'
 import Blog from './pages/Blog'
 import ForBuyers from './pages/ForBuyers'
+import SellerProfile from './pages/SellerProfile'
 import './index.css'
 
 function App() {
@@ -51,6 +52,7 @@ function App() {
           <Route path="/faq" element={<FAQ />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/for-buyers" element={<ForBuyers />} />
+          <Route path="/seller/:id" element={<SellerProfile />} />
         </Routes>
         <Footer />
       </BrowserRouter>

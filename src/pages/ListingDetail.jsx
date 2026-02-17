@@ -8,6 +8,7 @@ import {
   Share2, Twitter, Linkedin, Link2, Copy, Check, Tag
 } from 'lucide-react'
 import OfferModal from '../components/OfferModal'
+import Reviews from '../components/Reviews'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -612,6 +613,9 @@ export default function ListingDetail() {
                 </div>
               </div>
             )}
+
+            {/* Reviews Section */}
+            <Reviews listingId={listing.id} sellerId={listing.profiles?.id} />
           </div>
 
           {/* Sidebar */}
@@ -796,15 +800,15 @@ export default function ListingDetail() {
             {/* Seller Info */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-white mb-4">About the Seller</h3>
-              <div className="flex items-center gap-3 mb-4">
+              <Link to={`/seller/${listing.profiles?.id}`} className="flex items-center gap-3 mb-4 group/seller">
                 <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-full flex items-center justify-center text-white font-bold">
                   {listing.profiles?.full_name?.charAt(0) || '?'}
                 </div>
                 <div>
-                  <p className="font-medium text-white">{listing.profiles?.full_name || 'Anonymous'}</p>
-                  <p className="text-sm text-slate-500">Tool Builder</p>
+                  <p className="font-medium text-white group-hover/seller:text-violet-400 transition-colors">{listing.profiles?.full_name || 'Anonymous'}</p>
+                  <p className="text-sm text-slate-500">View Profile →</p>
                 </div>
-              </div>
+              </Link>
               {user && listing.profiles?.id !== user.id && (
                 <Link
                   to={`/messages?seller=${listing.profiles?.id}&listing=${listing.id}`}
