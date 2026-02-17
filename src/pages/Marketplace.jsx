@@ -38,7 +38,7 @@ export default function Marketplace() {
   const [selectedSort, setSelectedSort] = useState('newest')
   const [showFilters, setShowFilters] = useState(false)
   const [availableCategories, setAvailableCategories] = useState([])
-  const [selectedStatus, setSelectedStatus] = useState('all')
+
 
   useEffect(() => {
     document.title = 'Buy AI Tools & MRR Businesses | SwapAi'
@@ -114,27 +114,10 @@ export default function Marketplace() {
   }
 
   // Filter by search query (client-side for simplicity)
-  const filteredListings = listings.filter(listing => {
-    // Search filter
-    const matchesSearch = listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      listing.short_description?.toLowerCase().includes(searchQuery.toLowerCase())
-
-    if (!matchesSearch) return false
-
-    // Status filter
-    if (selectedStatus === 'all') return true
-
-    const now = new Date()
-    const createdAt = new Date(listing.created_at)
-    const daysSinceCreated = (now - createdAt) / (1000 * 60 * 60 * 24)
-
-    if (selectedStatus === 'new') return daysSinceCreated <= 14
-    if (selectedStatus === 'featured') return (listing.purchase_count || 0) >= 3 || (listing.views || 0) >= 50
-    if (selectedStatus === 'hot') return (listing.views || 0) >= 20 || (listing.purchase_count || 0) >= 1
-    if (selectedStatus === 'sold') return (listing.purchase_count || 0) > 0
-
-    return true
-  })
+  const filteredListings = listings.filter(listing =>
+    listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    listing.short_description?.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   // Simple listing array (no ads)
   const listingsWithAds = [...filteredListings]
@@ -220,45 +203,8 @@ export default function Marketplace() {
               })}
             </div>
 
-            {/* Row 2: Status Tabs + Price + Sort */}
+            {/* Row 2: Price + Sort */}
             <div className="flex flex-wrap items-center gap-3">
-              {/* Status Tabs */}
-              <div className="flex items-center gap-1.5">
-                {[
-                  { value: 'all', label: 'All' },
-                  { value: 'new', label: 'New' },
-                  { value: 'featured', label: 'Featured' },
-                  { value: 'hot', label: 'Hot' },
-                  { value: 'sold', label: 'Sold' },
-                ].map((status) => (
-                  <button
-                    key={status.value}
-                    onClick={() => setSelectedStatus(status.value)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      selectedStatus === status.value
-                        ? status.value === 'all'
-                          ? 'bg-white/10 text-white border border-white/20'
-                          : status.value === 'new'
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                          : status.value === 'featured'
-                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                          : status.value === 'hot'
-                          ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                          : 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
-                        : 'bg-slate-800/50 text-slate-500 hover:text-slate-300 border border-transparent hover:border-slate-700'
-                    }`}
-                  >
-                    {status.value === 'new' && '✨ '}
-                    {status.value === 'featured' && '⭐ '}
-                    {status.value === 'hot' && '🔥 '}
-                    {status.value === 'sold' && '✅ '}
-                    {status.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="h-6 w-px bg-slate-700 hidden sm:block" />
-
               {/* Price Filter */}
               <select
                 value={selectedPrice}
