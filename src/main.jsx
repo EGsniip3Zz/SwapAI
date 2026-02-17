@@ -24,12 +24,14 @@ import FAQ from './pages/FAQ'
 import Blog from './pages/Blog'
 import ForBuyers from './pages/ForBuyers'
 import SellerProfile from './pages/SellerProfile'
+import ScrollToTop from './components/ScrollToTop'
 import './index.css'
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <Navbar />
         <Routes>
           <Route path="/" element={<Home />} />
