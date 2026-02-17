@@ -185,54 +185,51 @@ export default function Marketplace() {
           </button>
 
           {/* Filters */}
-          <div className={`${showFilters ? 'block' : 'hidden'} md:block`}>
-            <div className="flex flex-wrap gap-4">
-              {/* Category Pills - Only show categories that have listings */}
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap gap-2">
-                  {/* All Categories button */}
+          <div className={`${showFilters ? 'block' : 'hidden'} md:block space-y-3`}>
+            {/* Row 1: Category Pills */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  selectedCategory === 'all'
+                    ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+                }`}
+              >
+                <span className="mr-1">🔥</span>
+                All Categories
+              </button>
+
+              {availableCategories.map((catValue) => {
+                const cat = allCategories[catValue]
+                if (!cat) return null
+                return (
                   <button
-                    onClick={() => setSelectedCategory('all')}
+                    key={catValue}
+                    onClick={() => setSelectedCategory(catValue)}
                     className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                      selectedCategory === 'all'
+                      selectedCategory === catValue
                         ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
                         : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
                     }`}
                   >
-                    <span className="mr-1">🔥</span>
-                    All Categories
+                    <span className="mr-1">{cat.emoji}</span>
+                    {cat.label}
                   </button>
+                )
+              })}
+            </div>
 
-                  {/* Dynamic category buttons */}
-                  {availableCategories.map((catValue) => {
-                    const cat = allCategories[catValue]
-                    if (!cat) return null
-                    return (
-                      <button
-                        key={catValue}
-                        onClick={() => setSelectedCategory(catValue)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                          selectedCategory === catValue
-                            ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
-                            : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
-                        }`}
-                      >
-                        <span className="mr-1">{cat.emoji}</span>
-                        {cat.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
+            {/* Row 2: Status Tabs + Price + Sort */}
+            <div className="flex flex-wrap items-center gap-3">
               {/* Status Tabs */}
               <div className="flex items-center gap-1.5">
                 {[
                   { value: 'all', label: 'All' },
-                  { value: 'new', label: 'New', color: 'emerald' },
-                  { value: 'featured', label: 'Featured', color: 'amber' },
-                  { value: 'hot', label: 'Hot', color: 'red' },
-                  { value: 'sold', label: 'Sold', color: 'violet' },
+                  { value: 'new', label: 'New' },
+                  { value: 'featured', label: 'Featured' },
+                  { value: 'hot', label: 'Hot' },
+                  { value: 'sold', label: 'Sold' },
                 ].map((status) => (
                   <button
                     key={status.value}
@@ -260,11 +257,13 @@ export default function Marketplace() {
                 ))}
               </div>
 
+              <div className="h-6 w-px bg-slate-700 hidden sm:block" />
+
               {/* Price Filter */}
               <select
                 value={selectedPrice}
                 onChange={(e) => setSelectedPrice(e.target.value)}
-                className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-300 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
               >
                 {priceFilters.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -277,7 +276,7 @@ export default function Marketplace() {
               <select
                 value={selectedSort}
                 onChange={(e) => setSelectedSort(e.target.value)}
-                className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-300 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
               >
                 {sortOptions.map((option) => (
                   <option key={option.value} value={option.value}>
