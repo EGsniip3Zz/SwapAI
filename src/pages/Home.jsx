@@ -125,6 +125,27 @@ export default function Home() {
         </div>
       </section>
 
+      {/* For Buyers CTA Banner */}
+      <section className="py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-fuchsia-600/10 via-violet-600/10 to-fuchsia-600/10 border border-violet-500/20">
+            <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-600/5 to-violet-600/5" />
+            <div className="relative flex flex-col sm:flex-row items-center justify-between gap-6 px-8 py-8">
+              <div className="text-center sm:text-left">
+                <h3 className="text-xl font-bold text-white mb-2">Looking to Acquire an AI Business?</h3>
+                <p className="text-slate-400 text-sm max-w-lg">Browse vetted AI tools with proven revenue, fast transfers, and dedicated support for serious buyers.</p>
+              </div>
+              <Link
+                to="/for-buyers"
+                className="flex-shrink-0 px-6 py-3 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 rounded-full text-white font-semibold text-sm transition-all shadow-lg shadow-fuchsia-500/20 hover:shadow-fuchsia-500/30"
+              >
+                For Buyers
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How It Works Section */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-900/50">
         <div className="max-w-7xl mx-auto">

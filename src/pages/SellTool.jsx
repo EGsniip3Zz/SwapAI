@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import {
@@ -416,10 +416,19 @@ export default function SellTool() {
 
           {/* Pricing */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-violet-400" />
-              Pricing
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-violet-400" />
+                Pricing
+              </h2>
+              <Link
+                to="/blog"
+                className="text-sm text-violet-400 hover:text-violet-300 font-medium transition-colors flex items-center gap-1 group"
+              >
+                What is your tool worth?
+                <span className="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+              </Link>
+            </div>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Pricing Type *</label>

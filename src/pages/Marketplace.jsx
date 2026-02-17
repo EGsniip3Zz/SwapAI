@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import ListingCard from '../components/ListingCard'
-import { Search, Filter, ChevronDown } from 'lucide-react'
+import { Search, Filter, ChevronDown, ArrowRight } from 'lucide-react'
 
 const allCategories = {
   'text-nlp': { label: 'Text & NLP', emoji: '📝' },
@@ -123,6 +124,18 @@ export default function Marketplace() {
   return (
     <div className="min-h-screen bg-slate-950 pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* For Buyers Banner */}
+        <Link to="/for-buyers" className="block mb-6 group">
+          <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-fuchsia-600/10 to-violet-600/10 border border-violet-500/20 rounded-xl hover:border-violet-500/40 transition-all">
+            <p className="text-sm text-slate-300">
+              <span className="font-semibold text-white">Serious buyer?</span> Get priority access to vetted AI businesses with proven revenue.
+            </p>
+            <span className="flex items-center gap-1 text-sm text-violet-400 font-medium flex-shrink-0 ml-4 group-hover:gap-2 transition-all">
+              For Buyers <ArrowRight className="w-4 h-4" />
+            </span>
+          </div>
+        </Link>
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">AI Tools Marketplace</h1>

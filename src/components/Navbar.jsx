@@ -103,10 +103,11 @@ export default function Navbar() {
               </Link>
             )}
             {user && (
-              <Link to="/messages" className="relative text-slate-300 hover:text-white transition-colors text-sm font-medium">
-                <MessageSquare className="w-5 h-5" />
+              <Link to="/messages" className={`relative flex items-center gap-1.5 text-sm font-medium transition-all ${unreadCount > 0 ? 'px-3 py-1.5 bg-violet-500/15 border border-violet-500/30 rounded-full text-violet-300 hover:text-white hover:bg-violet-500/25' : 'text-slate-300 hover:text-white'}`}>
+                <MessageSquare className="w-4 h-4" />
+                Messages
                 {unreadCount > 0 && (
-                  <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] flex items-center justify-center px-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[10px] font-bold rounded-full animate-pulse">
+                  <span className="min-w-[18px] h-[18px] flex items-center justify-center px-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[10px] font-bold rounded-full">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
